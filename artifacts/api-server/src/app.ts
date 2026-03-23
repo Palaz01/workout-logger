@@ -5,8 +5,6 @@ import connectPgSimple from "connect-pg-simple";
 import path from "path";
 import router from "./routes";
 import { authMiddleware } from "./middlewares/auth";
-import { pool } from "@workspace/db";
-
 const PgStore = connectPgSimple(session);
 
 const app: Express = express();
@@ -30,7 +28,7 @@ const isProduction = process.env.NODE_ENV === "production";
 app.use(
   session({
     store: new PgStore({
-      pool: pool,
+      conString: process.env.DATABASE_URL,
       createTableIfMissing: true,
     }),
     secret: sessionSecret,
