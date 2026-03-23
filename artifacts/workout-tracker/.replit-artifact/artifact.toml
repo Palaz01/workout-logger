@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Workout Tracker"
+version = "1.0.0"
+id = "artifacts/workout-tracker"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 19273
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/workout-tracker run dev"
+
+[services.env]
+PORT = "19273"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/workout-tracker", "run", "build"]
+publicDir = "artifacts/workout-tracker/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"

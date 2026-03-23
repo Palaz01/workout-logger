@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.local
+.cache
+.replit
+replit.nix
+*.tsbuildinfo
+attached_assets
+artifacts/mockup-sandbox

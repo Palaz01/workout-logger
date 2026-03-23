@@ -1,0 +1,19 @@
+packages:
+  "framer-motion": "Smooth animations for mobile interactions and page transitions"
+  "@hello-pangea/dnd": "Drag and drop functionality for reordering workout sets"
+  "react-hook-form": "Complex nested form state management for the plan builder"
+  "@hookform/resolvers": "Zod validation integration for react-hook-form"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility function to efficiently merge Tailwind CSS classes"
+
+images:
+  - path: "artifacts/workout-tracker/public/images/empty-plans.png"
+    description: "A clean, modern, minimalist 3D illustration of a gym kettlebell and a notebook on a light background, communicating 'no workouts yet'"
+    aspect_ratio: "1:1"
+  - path: "artifacts/workout-tracker/public/images/empty-exercises.png"
+    description: "A clean, modern, minimalist 3D illustration of a dumbbell and a stopwatch on a light background, communicating 'no exercises defined'"
+    aspect_ratio: "1:1"
+
+notes:
+  - The app uses generated React Query hooks from @workspace/api-client-react.
+  - The Plan Builder form is heavily nested and uses react-hook-form's useFieldArray.

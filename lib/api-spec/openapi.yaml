@@ -1,0 +1,1376 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Workout Tracker API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: exercises
+    description: Exercise management
+  - name: plans
+    description: Workout plan management
+  - name: sessions
+    description: Workout session logging
+  - name: invitations
+    description: User invitations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new trainer (creates organization)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: Registration successful, verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "409":
+          description: Username or email already taken
+
+  /auth/verify-email:
+    get:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify email address with token
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified and logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "404":
+          description: Invalid token
+        "410":
+          description: Token expired
+
+  /auth/resend-verification:
+    post:
+      operationId: resendVerification
+      tags: [auth]
+      summary: Resend email verification link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendVerificationBody"
+      responses:
+        "200":
+          description: Verification email sent (if account exists)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "429":
+          description: Rate limited
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with username/email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+        "403":
+          description: Email not verified
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get the currently authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+
+  /invitations:
+    post:
+      operationId: createInvitation
+      tags: [invitations]
+      summary: Create an invitation (trainer only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvitationBody"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationResponse"
+
+  /invitations/{token}:
+    get:
+      operationId: getInvitation
+      tags: [invitations]
+      summary: Get invitation details by token (public)
+      parameters:
+        - $ref: "#/components/parameters/InvitationToken"
+      responses:
+        "200":
+          description: Invitation details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationDetail"
+        "404":
+          description: Not found or expired
+
+  /invitations/{token}/accept:
+    post:
+      operationId: acceptInvitation
+      tags: [invitations]
+      summary: Accept an invitation and set credentials
+      parameters:
+        - $ref: "#/components/parameters/InvitationToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptInvitationBody"
+      responses:
+        "200":
+          description: Invitation accepted and logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "404":
+          description: Not found or expired
+        "409":
+          description: Username or email already taken
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Deleted
+
+  /exercises:
+    get:
+      operationId: listExercises
+      tags: [exercises]
+      summary: List all exercises
+      responses:
+        "200":
+          description: List of exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exercise"
+    post:
+      operationId: createExercise
+      tags: [exercises]
+      summary: Create an exercise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExerciseBody"
+      responses:
+        "201":
+          description: Created exercise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exercise"
+
+  /exercises/{id}:
+    get:
+      operationId: getExercise
+      tags: [exercises]
+      summary: Get an exercise by ID
+      parameters:
+        - $ref: "#/components/parameters/ExerciseId"
+      responses:
+        "200":
+          description: Exercise details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exercise"
+        "404":
+          description: Not found
+    put:
+      operationId: updateExercise
+      tags: [exercises]
+      summary: Update an exercise
+      parameters:
+        - $ref: "#/components/parameters/ExerciseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExerciseBody"
+      responses:
+        "200":
+          description: Updated exercise
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exercise"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteExercise
+      tags: [exercises]
+      summary: Delete an exercise
+      parameters:
+        - $ref: "#/components/parameters/ExerciseId"
+      responses:
+        "204":
+          description: Deleted
+
+  /plans:
+    get:
+      operationId: listPlans
+      tags: [plans]
+      summary: List workout plans
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+          description: Filter plans assigned to this user (or global plans)
+      responses:
+        "200":
+          description: List of plans (without nested sets)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanSummary"
+    post:
+      operationId: createPlan
+      tags: [plans]
+      summary: Create a workout plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanBody"
+      responses:
+        "201":
+          description: Created plan with full structure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanDetail"
+
+  /plans/{id}:
+    get:
+      operationId: getPlan
+      tags: [plans]
+      summary: Get a plan with full structure
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "200":
+          description: Plan with sets and exercises
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanDetail"
+        "404":
+          description: Not found
+    put:
+      operationId: updatePlan
+      tags: [plans]
+      summary: Update a workout plan (replaces all sets)
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlanBody"
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanDetail"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePlan
+      tags: [plans]
+      summary: Delete a workout plan
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "204":
+          description: Deleted
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List completed workout sessions
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+          description: Filter sessions by user
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of completed sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionSummary"
+    post:
+      operationId: startSession
+      tags: [sessions]
+      summary: Start a workout session from a plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartSessionBody"
+      responses:
+        "201":
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+
+  /sessions/{id}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get a session with its logs
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Session with logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateSessionStatus
+      tags: [sessions]
+      summary: Complete or cancel a session. When cancelling with zero logs, auto-deletes the session.
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSessionStatusBody"
+      responses:
+        "200":
+          description: Updated session. If cancelled with zero logs, the session is auto-deleted and `deleted` is true.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateSessionStatusResponse"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteSession
+      tags: [sessions]
+      summary: Delete a session and its logs
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "204":
+          description: Session deleted
+        "404":
+          description: Not found
+
+  /sessions/{id}/logs:
+    post:
+      operationId: upsertSessionLog
+      tags: [sessions]
+      summary: Log or update an entry for a session step
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSessionLogBody"
+      responses:
+        "200":
+          description: Logged entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionLogEntry"
+
+  /sessions/{id}/set-note:
+    post:
+      operationId: upsertSessionSetNote
+      tags: [sessions]
+      summary: Add or update a note for a set in a session
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSetNoteBody"
+      responses:
+        "200":
+          description: Note saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
+
+  /plans/{id}/active-session:
+    get:
+      operationId: getActiveSession
+      tags: [sessions]
+      summary: Get the current active session for a plan (if any)
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - name: userId
+          in: query
+          schema:
+            type: integer
+          description: Filter by user
+      responses:
+        "200":
+          description: Active session with logs (or null)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveSessionResponse"
+
+  /plans/{id}/last-session:
+    get:
+      operationId: getLastSession
+      tags: [sessions]
+      summary: Get the most recent completed session for a plan
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - name: userId
+          in: query
+          schema:
+            type: integer
+          description: Filter by user
+      responses:
+        "200":
+          description: Last completed session with logs (or null)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LastSessionResponse"
+
+components:
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    ExerciseId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    PlanId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    SessionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    InvitationToken:
+      name: token
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    RegisterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        email:
+          type: string
+      required:
+        - message
+        - email
+
+    ResendVerificationBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+
+    Organization:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - createdAt
+
+    RegisterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        password:
+          type: string
+        organizationName:
+          type: string
+      required:
+        - name
+        - email
+        - username
+        - password
+        - organizationName
+
+    LoginBody:
+      type: object
+      properties:
+        login:
+          type: string
+          description: Username or email
+        password:
+          type: string
+      required:
+        - login
+        - password
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [trainer, client]
+        organizationId:
+          type: integer
+        organizationName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - role
+        - organizationId
+        - organizationName
+        - createdAt
+
+    CreateInvitationBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [trainer, client]
+      required:
+        - name
+        - email
+        - role
+
+    InvitationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        token:
+          type: string
+        inviteUrl:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [trainer, client]
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - token
+        - inviteUrl
+        - name
+        - email
+        - role
+        - expiresAt
+
+    InvitationDetail:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [trainer, client]
+        organizationName:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        expired:
+          type: boolean
+        accepted:
+          type: boolean
+      required:
+        - name
+        - email
+        - role
+        - organizationName
+        - expiresAt
+        - expired
+        - accepted
+
+    AcceptInvitationBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [trainer, client]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - role
+        - createdAt
+
+    CreateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [trainer, client]
+      required:
+        - name
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    PlanAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+        planId:
+          type: integer
+        userId:
+          type: integer
+      required:
+        - id
+        - planId
+        - userId
+
+    Exercise:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        measurementType:
+          type: string
+          enum: [reps, seconds, meters]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - measurementType
+        - createdAt
+
+    CreateExerciseBody:
+      type: object
+      properties:
+        name:
+          type: string
+        measurementType:
+          type: string
+          enum: [reps, seconds, meters]
+      required:
+        - name
+        - measurementType
+
+    UpdateExerciseBody:
+      type: object
+      properties:
+        name:
+          type: string
+        measurementType:
+          type: string
+          enum: [reps, seconds, meters]
+      required:
+        - name
+        - measurementType
+
+    PlanSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdBy:
+          type: integer
+          nullable: true
+        isGlobal:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        setCount:
+          type: integer
+        assignedUserIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - id
+        - name
+        - isGlobal
+        - createdAt
+        - updatedAt
+        - setCount
+        - assignedUserIds
+
+    SetExerciseInput:
+      type: object
+      properties:
+        exerciseId:
+          type: integer
+        targetValue:
+          type: string
+        orderIndex:
+          type: integer
+      required:
+        - exerciseId
+        - targetValue
+        - orderIndex
+
+    PlanSetInput:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [straight, superset, triset, other]
+        rounds:
+          type: integer
+        restSeconds:
+          type: integer
+          nullable: true
+        orderIndex:
+          type: integer
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/SetExerciseInput"
+      required:
+        - type
+        - rounds
+        - orderIndex
+        - exercises
+
+    CreatePlanBody:
+      type: object
+      properties:
+        name:
+          type: string
+        isGlobal:
+          type: boolean
+        assignedUserIds:
+          type: array
+          items:
+            type: integer
+        createdBy:
+          type: integer
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanSetInput"
+      required:
+        - name
+        - sets
+
+    UpdatePlanBody:
+      type: object
+      properties:
+        name:
+          type: string
+        isGlobal:
+          type: boolean
+        assignedUserIds:
+          type: array
+          items:
+            type: integer
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanSetInput"
+      required:
+        - name
+        - sets
+
+    SetExerciseDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        exerciseId:
+          type: integer
+        exerciseName:
+          type: string
+        exerciseMeasurementType:
+          type: string
+          enum: [reps, seconds, meters]
+        targetValue:
+          type: string
+        orderIndex:
+          type: integer
+      required:
+        - id
+        - exerciseId
+        - exerciseName
+        - exerciseMeasurementType
+        - targetValue
+        - orderIndex
+
+    PlanSetDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [straight, superset, triset, other]
+        rounds:
+          type: integer
+        restSeconds:
+          type: integer
+          nullable: true
+        orderIndex:
+          type: integer
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/SetExerciseDetail"
+      required:
+        - id
+        - type
+        - rounds
+        - orderIndex
+        - exercises
+
+    PlanDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdBy:
+          type: integer
+          nullable: true
+        isGlobal:
+          type: boolean
+        assignedUserIds:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanSetDetail"
+      required:
+        - id
+        - name
+        - isGlobal
+        - assignedUserIds
+        - createdAt
+        - updatedAt
+        - sets
+
+    StartSessionBody:
+      type: object
+      properties:
+        planId:
+          type: integer
+        userId:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+      required:
+        - planId
+
+    UpdateSessionStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [completed, cancelled]
+        completedAt:
+          type: string
+          format: date-time
+      required:
+        - status
+
+    UpsertSessionLogBody:
+      type: object
+      properties:
+        planSetId:
+          type: integer
+        exerciseId:
+          type: integer
+        roundNumber:
+          type: integer
+        weight:
+          type: number
+          nullable: true
+        value:
+          type: number
+          nullable: true
+      required:
+        - planSetId
+        - exerciseId
+        - roundNumber
+
+    SessionSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        planId:
+          type: integer
+        planName:
+          type: string
+        userId:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, cancelled]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        logCount:
+          type: integer
+      required:
+        - id
+        - planId
+        - planName
+        - status
+        - startedAt
+        - logCount
+
+    SessionLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+        planSetId:
+          type: integer
+        exerciseId:
+          type: integer
+        exerciseName:
+          type: string
+        exerciseMeasurementType:
+          type: string
+          enum: [reps, seconds, meters]
+        roundNumber:
+          type: integer
+        weight:
+          type: number
+          nullable: true
+        value:
+          type: number
+          nullable: true
+      required:
+        - id
+        - sessionId
+        - planSetId
+        - exerciseId
+        - exerciseName
+        - exerciseMeasurementType
+        - roundNumber
+
+    SessionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        planId:
+          type: integer
+        planName:
+          type: string
+        userId:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, cancelled]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionLogEntry"
+        setNotes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SetNoteEntry"
+      required:
+        - id
+        - planId
+        - planName
+        - status
+        - startedAt
+        - logs
+        - setNotes
+
+    UpdateSessionStatusResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        planId:
+          type: integer
+        planName:
+          type: string
+        userId:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [active, completed, cancelled]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionLogEntry"
+        deleted:
+          type: boolean
+          description: True when the session was auto-deleted (cancelled with zero logs)
+      required:
+        - id
+        - planId
+        - planName
+        - status
+        - startedAt
+        - logs
+
+    UpsertSetNoteBody:
+      type: object
+      properties:
+        planSetId:
+          type: integer
+        note:
+          type: string
+      required:
+        - planSetId
+        - note
+
+    SetNoteEntry:
+      type: object
+      properties:
+        planSetId:
+          type: integer
+        note:
+          type: string
+      required:
+        - planSetId
+        - note
+
+    ActiveSessionResponse:
+      type: object
+      properties:
+        session:
+          $ref: "#/components/schemas/SessionDetail"
+          nullable: true
+
+    LastSessionResponse:
+      type: object
+      properties:
+        session:
+          $ref: "#/components/schemas/SessionDetail"
+          nullable: true
