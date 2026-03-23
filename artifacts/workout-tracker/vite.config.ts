@@ -14,7 +14,7 @@ if (!isProduction && !rawPort) {
 }
 const port = rawPort ? Number(rawPort) : 3000;
 
-const basePath = process.env.BASE_PATH || "/";
+const basePath = isProduction ? "/" : (process.env.BASE_PATH || "/");
 
 export default defineConfig({
   base: basePath,

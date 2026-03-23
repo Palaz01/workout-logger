@@ -19,15 +19,7 @@ RUN pnpm --filter @workspace/workout-tracker run build
 RUN pnpm --filter @workspace/api-server run build
 
 FROM base AS production
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY lib/db/package.json lib/db/
-COPY lib/api-zod/package.json lib/api-zod/
-COPY lib/api-spec/package.json lib/api-spec/
-COPY lib/api-client-react/package.json lib/api-client-react/
-COPY artifacts/api-server/package.json artifacts/api-server/
-COPY artifacts/workout-tracker/package.json artifacts/workout-tracker/
-RUN pnpm install --frozen-lockfile
-
+COPY --from=deps /app/ /app/
 COPY lib/db/ lib/db/
 COPY --from=build /app/artifacts/api-server/dist/ artifacts/api-server/dist/
 COPY --from=build /app/artifacts/workout-tracker/dist/public/ artifacts/api-server/dist/public/
