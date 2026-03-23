@@ -136,7 +136,13 @@ router.get("/auth/verify-email", async (req, res): Promise<void> => {
     .where(eq(organizationsTable.id, user.organizationId));
 
   req.session.userId = user.id;
-  req.session.save(() => {
+  req.session.save((err) => {
+    if (err) {
+      console.error("Session save error (verify-email):", err);
+      res.status(500).json({ error: "Session save failed" });
+      return;
+    }
+    console.log("Session saved (verify-email), sid:", req.sessionID, "userId:", user.id);
     res.json({
       id: user.id,
       name: user.name,
@@ -245,7 +251,13 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     .where(eq(organizationsTable.id, user.organizationId));
 
   req.session.userId = user.id;
-  req.session.save(() => {
+  req.session.save((err) => {
+    if (err) {
+      console.error("Session save error (login):", err);
+      res.status(500).json({ error: "Session save failed" });
+      return;
+    }
+    console.log("Session saved (login), sid:", req.sessionID, "userId:", user.id);
     res.json({
       id: user.id,
       name: user.name,
@@ -271,6 +283,7 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
 });
 
 router.get("/auth/me", async (req, res): Promise<void> => {
+  console.log("GET /auth/me - sessionID:", req.sessionID, "session:", JSON.stringify(req.session));
   const userId = req.session?.userId;
   if (!userId) {
     res.status(401).json({ error: "Not authenticated" });
