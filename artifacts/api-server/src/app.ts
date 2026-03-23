@@ -49,7 +49,10 @@ app.use("/api", authMiddleware, router);
 if (isProduction) {
   const publicDir = process.env.PUBLIC_DIR || path.resolve(process.cwd(), "artifacts/api-server/dist/public");
   app.use(express.static(publicDir));
-  app.get("*", (_req, res) => {
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
     res.sendFile(path.join(publicDir, "index.html"));
   });
 }
