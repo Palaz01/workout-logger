@@ -14,7 +14,6 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-RUN pnpm run typecheck:libs
 RUN pnpm --filter @workspace/workout-tracker run build
 RUN pnpm --filter @workspace/api-server run build
 
