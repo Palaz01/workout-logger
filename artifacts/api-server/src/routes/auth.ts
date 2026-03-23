@@ -254,7 +254,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   req.session.save((err) => {
     if (err) {
       console.error("Session save error (login):", err);
-      res.status(500).json({ error: "Session save failed" });
+      res.status(500).json({ error: "Session save failed: " + (err?.message || String(err)) });
       return;
     }
     console.log("Session saved (login), sid:", req.sessionID, "userId:", user.id);
