@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { useSessionHistory } from "@/hooks/use-history";
 import { useSessionMutations } from "@/hooks/use-sessions";
-import { Calendar, Clock, Dumbbell, Trash2 } from "lucide-react";
+import { Calendar, Clock, Dumbbell, Trash2, History as HistoryIcon } from "lucide-react";
 import { Link } from "wouter";
 import { format, formatDistanceStrict } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -77,7 +77,7 @@ export default function HistoryPage() {
         ) : monthGroups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
             <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
-              <Clock className="w-10 h-10 text-muted-foreground" />
+              <HistoryIcon className="w-10 h-10 text-muted-foreground" />
             </div>
             <h3 className="text-xl font-bold mb-2">No workout history</h3>
             <p className="text-muted-foreground">

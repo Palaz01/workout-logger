@@ -85,7 +85,9 @@ export default function ExercisesPage() {
           </div>
         ) : exercises?.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <Dumbbell className="w-24 h-24 text-muted-foreground/30 mb-6" />
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
+              <Dumbbell className="w-10 h-10 text-muted-foreground" />
+            </div>
             <h3 className="text-xl font-bold mb-2">No exercises yet</h3>
             <p className="text-muted-foreground mb-6">
               {isTrainer

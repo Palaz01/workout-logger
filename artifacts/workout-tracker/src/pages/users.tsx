@@ -7,7 +7,7 @@ import { Select } from "@/components/Select";
 import { Modal } from "@/components/Modal";
 import { useUsers, useUsersMutations } from "@/hooks/use-users";
 import { useUserContext } from "@/contexts/UserContext";
-import { Plus, Trash2, UserCircle, Pencil, Copy, Check, Mail, MoreVertical, Eye } from "lucide-react";
+import { Plus, Trash2, UserCircle, Users, Pencil, Copy, Check, Mail, MoreVertical, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -141,7 +141,9 @@ export default function UsersPage() {
           </div>
         ) : users?.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <UserCircle className="w-24 h-24 text-muted-foreground/30 mb-6" />
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
+              <Users className="w-10 h-10 text-muted-foreground" />
+            </div>
             <h3 className="text-xl font-bold mb-2">No users yet</h3>
             <p className="text-muted-foreground mb-6">Invite clients to start managing their workouts.</p>
             <Button onClick={() => setIsInviteOpen(true)} className="w-full sm:w-auto">

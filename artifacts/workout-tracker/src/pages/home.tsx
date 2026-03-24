@@ -2,7 +2,7 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/Button";
 import { usePlans, usePlanMutations } from "@/hooks/use-plans";
 import { useUserContext } from "@/contexts/UserContext";
-import { Plus, Play, MoreVertical, Edit2, Trash2, Calendar, LayoutList, ClipboardList } from "lucide-react";
+import { Plus, Play, MoreVertical, Edit2, Trash2, Calendar, LayoutList, ClipboardList, ScrollText } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -50,11 +50,9 @@ export default function HomePage() {
           </div>
         ) : plans?.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <img 
-              src={`${import.meta.env.BASE_URL}images/empty-plans.png`} 
-              alt="No plans" 
-              className="w-48 h-48 object-contain mb-6 drop-shadow-xl"
-            />
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
+              <ScrollText className="w-10 h-10 text-muted-foreground" />
+            </div>
             <h3 className="text-xl font-bold mb-2">No workout plans</h3>
             <p className="text-muted-foreground mb-6">
               {isTrainer
