@@ -6,7 +6,7 @@ import { Select } from "@/components/Select";
 import { Modal } from "@/components/Modal";
 import { useExercises, useExercisesMutations } from "@/hooks/use-exercises";
 import { useUserContext } from "@/contexts/UserContext";
-import { Plus, Edit2, Trash2, Activity, MoreVertical } from "lucide-react";
+import { Plus, Edit2, Trash2, Activity, MoreVertical, Dumbbell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Exercise, ExerciseMeasurementType } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -85,11 +85,7 @@ export default function ExercisesPage() {
           </div>
         ) : exercises?.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <img 
-              src={`${import.meta.env.BASE_URL}images/empty-exercises.png`} 
-              alt="No exercises" 
-              className="w-48 h-48 object-contain mb-6 drop-shadow-xl"
-            />
+            <Dumbbell className="w-24 h-24 text-muted-foreground/30 mb-6" />
             <h3 className="text-xl font-bold mb-2">No exercises yet</h3>
             <p className="text-muted-foreground mb-6">
               {isTrainer

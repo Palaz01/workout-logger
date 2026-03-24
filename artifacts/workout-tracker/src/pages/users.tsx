@@ -7,7 +7,7 @@ import { Select } from "@/components/Select";
 import { Modal } from "@/components/Modal";
 import { useUsers, useUsersMutations } from "@/hooks/use-users";
 import { useUserContext } from "@/contexts/UserContext";
-import { Plus, Trash2, UserCircle, Pencil, Copy, Check, Mail, MoreVertical } from "lucide-react";
+import { Plus, Trash2, UserCircle, Pencil, Copy, Check, Mail, MoreVertical, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,6 +42,7 @@ export default function UsersPage() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [editingUser, setEditingUser] = useState<{ id: number; name: string } | null>(null);
+  const [viewingUserId, setViewingUserId] = useState<number | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
@@ -122,6 +123,7 @@ export default function UsersPage() {
   };
 
   const userToDelete = users?.find((u) => u.id === showDeleteConfirm);
+  const userToView = users?.find((u) => u.id === viewingUserId);
 
   return (
     <Layout
@@ -188,8 +190,14 @@ export default function UsersPage() {
                             className="absolute right-0 top-full mt-1 w-36 bg-white rounded-xl shadow-xl border border-border/50 overflow-hidden z-50 origin-top-right"
                           >
                             <button
-                              onClick={() => { setEditingUser({ id: user.id, name: user.name }); setActiveMenuId(null); }}
+                              onClick={() => { setViewingUserId(user.id); setActiveMenuId(null); }}
                               className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-muted text-foreground transition-colors"
+                            >
+                              <Eye className="w-4 h-4" /> View
+                            </button>
+                            <button
+                              onClick={() => { setEditingUser({ id: user.id, name: user.name }); setActiveMenuId(null); }}
+                              className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-muted text-foreground transition-colors border-t border-border/50"
                             >
                               <Pencil className="w-4 h-4" /> Edit
                             </button>
@@ -342,6 +350,53 @@ export default function UsersPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={viewingUserId !== null}
+        onClose={() => setViewingUserId(null)}
+        title="User Details"
+      >
+        {userToView && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 pb-4 border-b border-border/50">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-semibold">
+                {userToView.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">{userToView.name}</h3>
+                <span className="inline-block mt-0.5 px-2.5 py-0.5 text-xs font-semibold uppercase rounded-full bg-primary/10 text-primary">
+                  {userToView.role}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email</p>
+                <p className="text-sm font-medium mt-0.5">{userToView.email}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Username</p>
+                <p className="text-sm font-medium mt-0.5">{userToView.username}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Role</p>
+                <p className="text-sm font-medium mt-0.5 capitalize">{userToView.role}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Joined</p>
+                <p className="text-sm font-medium mt-0.5">
+                  {new Date(userToView.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                </p>
+              </div>
+            </div>
+            <div className="pt-2">
+              <Button variant="outline" className="w-full" onClick={() => setViewingUserId(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </Layout>
   );
