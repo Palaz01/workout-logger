@@ -425,6 +425,11 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
     .from(exercisesTable)
     .where(eq(exercisesTable.id, parsed.data.exerciseId));
 
+  if (!exercise) {
+    res.status(404).json({ error: "Exercise not found" });
+    return;
+  }
+
   let log;
   if (existing) {
     [log] = await db
