@@ -228,6 +228,7 @@ router.post("/sessions", async (req, res): Promise<void> => {
       userId: parsed.data.userId ?? null,
       status: "active",
       organizationId: orgId,
+      snapshotPlanName: plan.name,
       ...(parsed.data.startedAt ? { startedAt: parsed.data.startedAt } : {}),
     })
     .returning();
@@ -482,6 +483,8 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
       .set({
         weight: parsed.data.weight ?? null,
         value: parsed.data.value ?? null,
+        snapshotExerciseName: exercise.name,
+        snapshotMeasurementType: exercise.measurementType,
       })
       .where(eq(sessionLogsTable.id, existing.id))
       .returning();
@@ -495,6 +498,8 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
         roundNumber: parsed.data.roundNumber,
         weight: parsed.data.weight ?? null,
         value: parsed.data.value ?? null,
+        snapshotExerciseName: exercise.name,
+        snapshotMeasurementType: exercise.measurementType,
       })
       .returning();
   }
