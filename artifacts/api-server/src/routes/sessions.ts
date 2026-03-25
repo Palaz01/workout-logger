@@ -306,6 +306,44 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
     }
   }
 
+  if (existing.planId) {
+    const [plan] = await db
+      .select({ name: plansTable.name })
+      .from(plansTable)
+      .where(eq(plansTable.id, existing.planId));
+    if (plan) {
+      await db
+        .update(sessionsTable)
+        .set({ snapshotPlanName: plan.name })
+        .where(and(eq(sessionsTable.id, params.data.id), sql`snapshot_plan_name IS NULL`));
+    }
+  }
+
+  const logsToSnapshot = await db
+    .select({
+      logId: sessionLogsTable.id,
+      exerciseName: exercisesTable.name,
+      measurementType: exercisesTable.measurementType,
+    })
+    .from(sessionLogsTable)
+    .innerJoin(exercisesTable, eq(sessionLogsTable.exerciseId, exercisesTable.id))
+    .where(
+      and(
+        eq(sessionLogsTable.sessionId, params.data.id),
+        sql`${sessionLogsTable.snapshotExerciseName} IS NULL`
+      )
+    );
+
+  for (const logRow of logsToSnapshot) {
+    await db
+      .update(sessionLogsTable)
+      .set({
+        snapshotExerciseName: logRow.exerciseName,
+        snapshotMeasurementType: logRow.measurementType,
+      })
+      .where(eq(sessionLogsTable.id, logRow.logId));
+  }
+
   await db
     .update(sessionsTable)
     .set({
