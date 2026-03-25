@@ -9,21 +9,24 @@ import { usersTable } from "./users";
 export const sessionsTable = pgTable("sessions", {
   id: serial("id").primaryKey(),
   organizationId: integer("organization_id").notNull().references(() => organizationsTable.id, { onDelete: "cascade" }),
-  planId: integer("plan_id").notNull().references(() => plansTable.id, { onDelete: "cascade" }),
+  planId: integer("plan_id").references(() => plansTable.id, { onDelete: "set null" }),
   userId: integer("user_id").references(() => usersTable.id, { onDelete: "set null" }),
   status: text("status", { enum: ["active", "completed", "cancelled"] }).notNull().default("active"),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  snapshotPlanName: text("snapshot_plan_name"),
 });
 
 export const sessionLogsTable = pgTable("session_logs", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").notNull().references(() => sessionsTable.id, { onDelete: "cascade" }),
-  planSetId: integer("plan_set_id").notNull().references(() => planSetsTable.id, { onDelete: "cascade" }),
-  exerciseId: integer("exercise_id").notNull().references(() => exercisesTable.id, { onDelete: "cascade" }),
+  planSetId: integer("plan_set_id").references(() => planSetsTable.id, { onDelete: "set null" }),
+  exerciseId: integer("exercise_id").references(() => exercisesTable.id, { onDelete: "set null" }),
   roundNumber: integer("round_number").notNull(),
   weight: real("weight"),
   value: real("value"),
+  snapshotExerciseName: text("snapshot_exercise_name"),
+  snapshotMeasurementType: text("snapshot_measurement_type"),
 }, (table) => [
   uniqueIndex("session_log_unique_idx").on(table.sessionId, table.planSetId, table.exerciseId, table.roundNumber),
 ]);
@@ -35,7 +38,7 @@ export type Session = typeof sessionsTable.$inferSelect;
 export const sessionSetNotesTable = pgTable("session_set_notes", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").notNull().references(() => sessionsTable.id, { onDelete: "cascade" }),
-  planSetId: integer("plan_set_id").notNull().references(() => planSetsTable.id, { onDelete: "cascade" }),
+  planSetId: integer("plan_set_id").references(() => planSetsTable.id, { onDelete: "set null" }),
   note: text("note").notNull(),
 }, (table) => [
   uniqueIndex("session_set_note_unique_idx").on(table.sessionId, table.planSetId),
