@@ -71,13 +71,19 @@ async function getSessionDetail(sessionId: number) {
     .leftJoin(exercisesTable, eq(sessionLogsTable.exerciseId, exercisesTable.id))
     .where(eq(sessionLogsTable.sessionId, sessionId));
 
+  const isCompleted = session.status !== "active";
+
   const logs = rawLogs.map((log) => ({
     id: log.id,
     sessionId: log.sessionId,
     planSetId: log.planSetId ?? 0,
     exerciseId: log.exerciseId ?? 0,
-    exerciseName: log.snapshotExerciseName ?? log.liveExerciseName ?? "Deleted Exercise",
-    exerciseMeasurementType: log.snapshotMeasurementType ?? log.liveExerciseMeasurementType ?? "reps",
+    exerciseName: isCompleted
+      ? (log.snapshotExerciseName ?? log.liveExerciseName ?? "Deleted Exercise")
+      : (log.liveExerciseName ?? log.snapshotExerciseName ?? "Deleted Exercise"),
+    exerciseMeasurementType: isCompleted
+      ? (log.snapshotMeasurementType ?? log.liveExerciseMeasurementType ?? "reps")
+      : (log.liveExerciseMeasurementType ?? log.snapshotMeasurementType ?? "reps"),
     roundNumber: log.roundNumber,
     weight: log.weight,
     value: log.value,
@@ -94,7 +100,9 @@ async function getSessionDetail(sessionId: number) {
   return {
     id: session.id,
     planId: session.planId ?? 0,
-    planName: session.snapshotPlanName ?? session.livePlanName ?? "Deleted Plan",
+    planName: isCompleted
+      ? (session.snapshotPlanName ?? session.livePlanName ?? "Deleted Plan")
+      : (session.livePlanName ?? session.snapshotPlanName ?? "Deleted Plan"),
     userId: session.userId,
     status: session.status,
     startedAt: session.startedAt,
@@ -137,16 +145,21 @@ router.get("/sessions", async (req, res): Promise<void> => {
     .limit(limit)
     .offset(offset);
 
-  const sessions = rawSessions.map((s) => ({
-    id: s.id,
-    planId: s.planId ?? 0,
-    planName: s.snapshotPlanName ?? s.livePlanName ?? "Deleted Plan",
-    userId: s.userId,
-    status: s.status,
-    startedAt: s.startedAt,
-    completedAt: s.completedAt,
-    logCount: s.logCount,
-  }));
+  const sessions = rawSessions.map((s) => {
+    const isCompleted = s.status !== "active";
+    return {
+      id: s.id,
+      planId: s.planId ?? 0,
+      planName: isCompleted
+        ? (s.snapshotPlanName ?? s.livePlanName ?? "Deleted Plan")
+        : (s.livePlanName ?? s.snapshotPlanName ?? "Deleted Plan"),
+      userId: s.userId,
+      status: s.status,
+      startedAt: s.startedAt,
+      completedAt: s.completedAt,
+      logCount: s.logCount,
+    };
+  });
 
   res.json(sessions);
 });
@@ -215,7 +228,6 @@ router.post("/sessions", async (req, res): Promise<void> => {
       userId: parsed.data.userId ?? null,
       status: "active",
       organizationId: orgId,
-      snapshotPlanName: plan.name,
       ...(parsed.data.startedAt ? { startedAt: parsed.data.startedAt } : {}),
     })
     .returning();
@@ -315,7 +327,7 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
       await db
         .update(sessionsTable)
         .set({ snapshotPlanName: plan.name })
-        .where(and(eq(sessionsTable.id, params.data.id), sql`snapshot_plan_name IS NULL`));
+        .where(eq(sessionsTable.id, params.data.id));
     }
   }
 
@@ -327,12 +339,7 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
     })
     .from(sessionLogsTable)
     .innerJoin(exercisesTable, eq(sessionLogsTable.exerciseId, exercisesTable.id))
-    .where(
-      and(
-        eq(sessionLogsTable.sessionId, params.data.id),
-        sql`${sessionLogsTable.snapshotExerciseName} IS NULL`
-      )
-    );
+    .where(eq(sessionLogsTable.sessionId, params.data.id));
 
   for (const logRow of logsToSnapshot) {
     await db
@@ -475,8 +482,6 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
       .set({
         weight: parsed.data.weight ?? null,
         value: parsed.data.value ?? null,
-        snapshotExerciseName: exercise.name,
-        snapshotMeasurementType: exercise.measurementType,
       })
       .where(eq(sessionLogsTable.id, existing.id))
       .returning();
@@ -490,8 +495,6 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
         roundNumber: parsed.data.roundNumber,
         weight: parsed.data.weight ?? null,
         value: parsed.data.value ?? null,
-        snapshotExerciseName: exercise.name,
-        snapshotMeasurementType: exercise.measurementType,
       })
       .returning();
   }
