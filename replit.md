@@ -120,7 +120,7 @@ PostgreSQL with Drizzle ORM. Schema files in `lib/db/src/schema/`. All IDs are `
 
 ## API Routes
 
-All routes are prefixed with `/api` (configured in `app.ts`). Auth middleware (`middlewares/auth.ts`) runs on all `/api` routes but bypasses authentication for these paths: `/healthz`, `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/resend-verification`, and `/invitations/:token` (GET + POST accept).
+All routes are prefixed with `/api` (configured in `app.ts`). Auth middleware (`middlewares/auth.ts`) runs on all `/api` routes but bypasses authentication for these public paths: `/healthz`, `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/verify-email`, `/auth/resend-verification`, and `/invitations/:token` (GET + POST accept). Note: `/auth/me` and `/auth/logout` are public at the middleware level but check session internally.
 
 | Route File | Endpoints |
 |---|---|
@@ -157,9 +157,9 @@ All routes are prefixed with `/api` (configured in `app.ts`). Auth middleware (`
 Each domain has a dedicated hook file in `artifacts/workout-tracker/src/hooks/`:
 - `use-plans.ts` — `usePlans()`, `usePlan(id)`, plan mutations
 - `use-exercises.ts` — `useExercises()`, exercise mutations
-- `use-sessions.ts` — `useSessionMutations()`, `useLastSession(planId)`, `useActiveSession(planId)`, `useSessions()`
+- `use-sessions.ts` — `useSession(id)`, `useSessionMutations()`, `useLastSession(planId)`, `useActiveSession(planId)`
 - `use-users.ts` — `useUsers()`, user mutations
-- `use-history.ts` — `useHistory()` with monthly grouping
+- `use-history.ts` — `useSessionHistory()`, `useSessionDetail(id)`
 - `use-toast.ts` — Toast notification system
 - `use-keyboard-height.ts` — iOS keyboard height detection for mobile UX
 - `use-mobile.tsx` — Mobile device detection
@@ -185,9 +185,9 @@ Each domain has a dedicated hook file in `artifacts/workout-tracker/src/hooks/`:
 - Backend: `tsx ./src/index.ts` (TypeScript execution)
 
 ### Production Build
-- Frontend: `pnpm --filter @workspace/workout-tracker run build` → Vite builds to `artifacts/workout-tracker/dist/`
+- Frontend: `pnpm --filter @workspace/workout-tracker run build` → Vite builds to `artifacts/workout-tracker/dist/public/`
 - Backend: `pnpm --filter @workspace/api-server run build` → runs `build.ts` which uses esbuild
-  - **esbuild allowlist pattern:** `build.ts` has an `allowlist` array of packages to bundle into the output. Packages NOT in the allowlist are kept as external requires. If you add a new npm dependency to the API server, check if it needs to be in the allowlist (most do, especially pure-JS packages). `pg` and `connect-pg-simple` MUST be in the allowlist.
+  - **esbuild allowlist pattern:** `build.ts` has an `allowlist` array of packages to bundle into the output. Packages NOT in the allowlist are kept as external requires (resolved from `node_modules` at runtime, which are present in the Docker image). Bundling pure-JS packages into the allowlist reduces cold start times. `pg` and `connect-pg-simple` MUST be in the allowlist.
   - Output: single `artifacts/api-server/dist/index.cjs` file
 
 ### Docker Build (Dockerfile)
@@ -198,7 +198,7 @@ Multi-stage build:
 
 ### start.sh (Production Startup)
 Runs in order:
-1. `drizzle-kit push` — Syncs Drizzle schema to PostgreSQL (safe, non-destructive)
+1. `drizzle-kit push --force` — Syncs Drizzle schema to PostgreSQL (uses `--force` to skip interactive prompts; may apply destructive changes if schema diverges significantly)
 2. Creates `session` table (for connect-pg-simple) if not exists
 3. Runs snapshot backfill migration (adds snapshot columns, changes FKs to SET NULL, backfills snapshot values from live data)
 4. Starts Node.js server: `node artifacts/api-server/dist/index.cjs`
