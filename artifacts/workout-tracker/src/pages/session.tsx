@@ -18,6 +18,7 @@ import {
   Trophy,
   Timer,
   AlertTriangle,
+  MessageSquare,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { PlanDetail, SessionLogEntry } from "@workspace/api-client-react";
@@ -324,6 +325,7 @@ export default function SessionPage() {
   };
 
   const lastLogs = lastSessionData?.session?.logs ?? [];
+  const lastSetNotes = lastSessionData?.session?.setNotes ?? [];
 
   interface GroupedSetExercise {
     exerciseId: number;
@@ -621,6 +623,15 @@ export default function SessionPage() {
                 )}
               </div>
             ))}
+            {(() => {
+              const lastNote = lastSetNotes.find((n) => n.planSetId === currentStep.setId);
+              return lastNote ? (
+                <div className="flex items-start gap-2.5 px-3 py-3 bg-muted/40 rounded-xl border border-border/30">
+                  <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground italic leading-relaxed">{lastNote.note}</p>
+                </div>
+              ) : null;
+            })()}
           </div>
         </Modal>
       </div>
@@ -747,6 +758,15 @@ export default function SessionPage() {
           <span className="bg-muted px-2.5 py-1 rounded-lg">
             Round {currentStep.roundNumber}/{currentStep.totalRounds}
           </span>
+          {lastSessionData?.session && (
+            <button
+              onClick={() => setShowLastStats(true)}
+              className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <History className="w-3 h-3" />
+              <span className="text-[11px]">Last</span>
+            </button>
+          )}
         </div>
 
         <AnimatePresence mode="wait" custom={direction}>
@@ -891,6 +911,54 @@ export default function SessionPage() {
               Cancel Workout
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showLastStats}
+        onClose={() => setShowLastStats(false)}
+        title={`Last: Set ${currentStep.setIndex}`}
+      >
+        <div className="space-y-4">
+          {getLastStatsForSet(currentStep.setId).map((group) => (
+            <div key={group.exerciseId} className="bg-muted/30 rounded-2xl overflow-hidden border border-border/50">
+              <div className="px-4 py-3 border-b border-border/50 flex items-center gap-3">
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Dumbbell className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="font-bold text-sm">{group.exerciseName}</h3>
+              </div>
+              {group.rounds.length > 0 ? (
+                <div className="divide-y divide-border/30">
+                  <div className="grid grid-cols-3 px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    <span>Round</span>
+                    <span className="text-center">Weight</span>
+                    <span className="text-right">{getMeasurementLabel(group.measurementType)}</span>
+                  </div>
+                  {group.rounds.map((round) => (
+                    <div key={round.id} className="grid grid-cols-3 px-4 py-3 items-center">
+                      <span className="text-sm font-medium text-muted-foreground">#{round.roundNumber}</span>
+                      <span className="text-sm font-bold text-center">{round.weight != null ? `${round.weight} kg` : "—"}</span>
+                      <span className="text-sm font-bold text-primary text-right">{round.value != null ? `${round.value} ${getMeasurementLabel(group.measurementType)}` : "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-4 text-center text-sm text-muted-foreground">
+                  No data
+                </div>
+              )}
+            </div>
+          ))}
+          {(() => {
+            const lastNote = lastSetNotes.find((n) => n.planSetId === currentStep.setId);
+            return lastNote ? (
+              <div className="flex items-start gap-2.5 px-3 py-3 bg-muted/40 rounded-xl border border-border/30">
+                <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-muted-foreground italic leading-relaxed">{lastNote.note}</p>
+              </div>
+            ) : null;
+          })()}
         </div>
       </Modal>
     </div>
