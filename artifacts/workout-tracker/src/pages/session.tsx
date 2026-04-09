@@ -333,23 +333,23 @@ export default function SessionPage() {
   }
 
   const getLastStatsForSet = (setId: number): GroupedSetExercise[] => {
-    const setLogs = lastLogs.filter((l) => l.planSetId === setId);
-    const groups = new Map<number, GroupedSetExercise>();
-    for (const log of setLogs) {
-      if (!groups.has(log.exerciseId)) {
-        groups.set(log.exerciseId, {
-          exerciseId: log.exerciseId,
-          exerciseName: log.exerciseName,
-          measurementType: log.exerciseMeasurementType,
-          rounds: [],
-        });
-      }
-      groups.get(log.exerciseId)!.rounds.push(log);
-    }
-    for (const group of groups.values()) {
-      group.rounds.sort((a, b) => a.roundNumber - b.roundNumber);
-    }
-    return Array.from(groups.values());
+    const currentSet = plan?.sets.find((s) => s.id === setId);
+    if (!currentSet) return [];
+
+    const currentExercises = [...currentSet.exercises].sort(
+      (a, b) => a.orderIndex - b.orderIndex
+    );
+
+    return currentExercises.map((ex) => {
+      const exerciseLogs = lastLogs.filter((l) => l.exerciseId === ex.exerciseId);
+      const sorted = [...exerciseLogs].sort((a, b) => a.roundNumber - b.roundNumber);
+      return {
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName,
+        measurementType: ex.exerciseMeasurementType,
+        rounds: sorted,
+      };
+    });
   };
 
   if (planLoading || activeLoading || start.isPending) {
@@ -517,7 +517,7 @@ export default function SessionPage() {
                 )}
               </div>
 
-              {getLastStatsForSet(currentStep.setId).length > 0 && (
+              {lastSessionData?.session && (
                 <button
                   onClick={() => setShowLastStats(true)}
                   className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -599,20 +599,26 @@ export default function SessionPage() {
                   </div>
                   <h3 className="font-bold text-sm">{group.exerciseName}</h3>
                 </div>
-                <div className="divide-y divide-border/30">
-                  <div className="grid grid-cols-3 px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    <span>Round</span>
-                    <span className="text-center">Weight</span>
-                    <span className="text-right">{getMeasurementLabel(group.measurementType)}</span>
-                  </div>
-                  {group.rounds.map((round) => (
-                    <div key={round.id} className="grid grid-cols-3 px-4 py-3 items-center">
-                      <span className="text-sm font-medium text-muted-foreground">#{round.roundNumber}</span>
-                      <span className="text-sm font-bold text-center">{round.weight != null ? `${round.weight} kg` : "—"}</span>
-                      <span className="text-sm font-bold text-primary text-right">{round.value != null ? `${round.value} ${getMeasurementLabel(group.measurementType)}` : "—"}</span>
+                {group.rounds.length > 0 ? (
+                  <div className="divide-y divide-border/30">
+                    <div className="grid grid-cols-3 px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      <span>Round</span>
+                      <span className="text-center">Weight</span>
+                      <span className="text-right">{getMeasurementLabel(group.measurementType)}</span>
                     </div>
-                  ))}
-                </div>
+                    {group.rounds.map((round) => (
+                      <div key={round.id} className="grid grid-cols-3 px-4 py-3 items-center">
+                        <span className="text-sm font-medium text-muted-foreground">#{round.roundNumber}</span>
+                        <span className="text-sm font-bold text-center">{round.weight != null ? `${round.weight} kg` : "—"}</span>
+                        <span className="text-sm font-bold text-primary text-right">{round.value != null ? `${round.value} ${getMeasurementLabel(group.measurementType)}` : "—"}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-4 text-center text-sm text-muted-foreground">
+                    No data
+                  </div>
+                )}
               </div>
             ))}
           </div>
