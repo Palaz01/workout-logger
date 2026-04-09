@@ -120,7 +120,7 @@ PostgreSQL with Drizzle ORM. Schema files in `lib/db/src/schema/`. All IDs are `
 
 ## API Routes
 
-All routes are prefixed with `/api` (configured in `app.ts`). Auth middleware runs on all `/api` routes — public routes (register, login, verify-email, healthz) skip auth internally.
+All routes are prefixed with `/api` (configured in `app.ts`). Auth middleware (`middlewares/auth.ts`) runs on all `/api` routes but bypasses authentication for these paths: `/healthz`, `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/resend-verification`, and `/invitations/:token` (GET + POST accept).
 
 | Route File | Endpoints |
 |---|---|
@@ -141,7 +141,7 @@ All routes are prefixed with `/api` (configured in `app.ts`). Auth middleware ru
 | `plan-form.tsx` | `/plans/new`, `/plans/:id/edit` | Create/edit workout plans |
 | `exercises.tsx` | `/exercises` | Exercise library CRUD |
 | `session.tsx` | `/session/:planId` | Step-by-step guided workout logging with Last Stats |
-| `session-detail.tsx` | `/sessions/:id` | Review completed session details |
+| `session-detail.tsx` | `/history/:id` | Review completed session details |
 | `history.tsx` | `/history` | Session history with monthly grouping |
 | `log-past.tsx` | `/log-past/:planId` | Log a past workout with date picker |
 | `users.tsx` | `/users` | User management (trainer only) |
@@ -226,8 +226,8 @@ Runs in order:
 
 ## PWA Support
 
-- `manifest.json` in `artifacts/workout-tracker/public/` — app name "Workout Logger", standalone display, blue theme
-- Icons: 512px, 192px, 180px (Apple touch) blue dumbbell icons in `public/icons/`
+- `manifest.json` in `artifacts/workout-tracker/public/` — app name "Workout Logger", standalone display, white theme (`#ffffff`)
+- Icons: `public/icon-512.png`, `public/icon-192.png`, `public/apple-touch-icon.png` — blue dumbbell icons
 - `index.html` has all PWA meta tags (theme-color, apple-mobile-web-app-capable, etc.)
 
 ## Known Limitations & Gotchas
