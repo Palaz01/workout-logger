@@ -176,7 +176,7 @@ Each domain has a dedicated hook file in `artifacts/workout-tracker/src/hooks/`:
 - Uses `connect-pg-simple` with the shared Drizzle `pool` from `@workspace/db` (cast as `pool as any` due to type mismatch)
 - The `session` table is NOT managed by Drizzle — it's created by `start.sh` before the server starts
 - Do NOT add `createTableIfMissing: true` to PgStore config (it has caused issues)
-- `trust proxy` is set to `true` in `app.ts` for production HTTPS behind reverse proxies
+- `trust proxy` is set to `true` unconditionally in `app.ts` (both dev and prod) for HTTPS behind reverse proxies
 
 ## Build Pipeline
 
@@ -234,7 +234,7 @@ Runs in order:
 
 - **Resend email:** Without a custom domain verified in Resend, emails can only be sent FROM `onboarding@resend.dev` and only TO the account owner's email. For production multi-user email, a custom domain must be configured in Resend.
 - **Session table:** Managed outside Drizzle. If schema push ever drops it, `start.sh` recreates it.
-- **esbuild allowlist:** New API dependencies must be added to the allowlist in `build.ts` or they'll be treated as external (and fail in production since they won't be bundled).
+- **esbuild allowlist:** New API dependencies are externalized by default. They still work at runtime (node_modules are in the Docker image), but adding them to the allowlist in `build.ts` improves cold start times by bundling them into the single output file.
 - **Controlled/uncontrolled input warning:** React console shows warnings about controlled/uncontrolled inputs in the session logging page — cosmetic, does not affect functionality.
 - **Schema sync:** `drizzle-kit push --force` is used in `start.sh` to avoid interactive prompts in production.
 
