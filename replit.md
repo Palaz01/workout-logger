@@ -1,5 +1,7 @@
 # Workout Logger
 
+> **First time picking up this project in a new Replit account?** Start with `HANDOVER.md` at the project root — it covers zip import, secrets, integrations, and Railway takeover. This file (`replit.md`) is the deep technical reference.
+
 ## Overview
 
 Mobile-first workout tracking web app (English UI) with exercise library, plan builder, step-by-step session logging, history with monthly grouping, and full multi-tenant multi-user support. Trainers manage clients, assign plans, and track progress. Includes authentication, organization-scoped data isolation, and email verification via Resend. Deployed to Railway via Docker.
@@ -43,6 +45,7 @@ Mobile-first workout tracking web app (English UI) with exercise library, plan b
 │   │   └── src/generated/   # Auto-generated, do NOT edit manually
 │   └── api-client-react/    # @workspace/api-client-react — Generated React Query hooks
 │       └── src/generated/   # Auto-generated, do NOT edit manually
+├── scripts/                 # @workspace/scripts — Utility scripts (seed-trainer.ts, post-merge.sh)
 ├── Dockerfile               # Multi-stage production build
 ├── start.sh                 # Production startup: schema push + migrations + server
 ├── railway.json             # Railway deployment config
