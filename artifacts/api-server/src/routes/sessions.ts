@@ -411,7 +411,7 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
 
     await db
       .update(sessionsTable)
-      .set({ status: "active", startedAt: new Date() })
+      .set({ status: "active", startedAt: existing.scheduledFor ?? new Date() })
       .where(eq(sessionsTable.id, params.data.id));
     const detail = await getSessionDetail(params.data.id);
     res.json(UpdateSessionStatusResponse.parse(detail!));
