@@ -80,10 +80,7 @@ async function getSessionDetail(sessionId: number) {
   const logs = rawLogs.map((log) => {
     const isConditioning =
       log.liveSetType === "conditioning" ||
-      log.snapshotSetDescription != null ||
-      (log.exerciseId == null &&
-        log.snapshotExerciseName == null &&
-        log.liveExerciseName == null);
+      (log.liveSetType == null && log.snapshotSetDescription != null);
     const setDescription = isCompleted
       ? (log.snapshotSetDescription ?? log.liveSetDescription ?? null)
       : (log.liveSetDescription ?? log.snapshotSetDescription ?? null);
@@ -190,8 +187,7 @@ router.get("/sessions", async (req, res): Promise<void> => {
   for (const r of conditioningRows) {
     const isConditioning =
       r.liveSetType === "conditioning" ||
-      r.snapshotSetDescription != null ||
-      (r.exerciseId == null && r.snapshotExerciseName == null && r.liveExerciseName == null);
+      (r.liveSetType == null && r.snapshotSetDescription != null);
     if (!isConditioning) continue;
     const description = r.snapshotSetDescription ?? r.liveSetDescription ?? null;
     const key = `${r.planSetId ?? "null"}`;
@@ -405,7 +401,7 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
     .where(eq(sessionLogsTable.sessionId, params.data.id));
 
   for (const logRow of logsToSnapshot) {
-    const isConditioning = logRow.setType === "conditioning" || logRow.exerciseId == null;
+    const isConditioning = logRow.setType === "conditioning";
     await db
       .update(sessionLogsTable)
       .set({
