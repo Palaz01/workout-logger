@@ -121,11 +121,9 @@ export function useSessionMutations() {
       queryClient.invalidateQueries({
         queryKey: getGetActiveSessionQueryKey(data.planId),
       });
-      if (data.deleted) {
-        queryClient.invalidateQueries({
-          queryKey: getListSessionsQueryKey(),
-        });
-      }
+      queryClient.invalidateQueries({
+        queryKey: getListSessionsQueryKey(),
+      });
     },
   });
 

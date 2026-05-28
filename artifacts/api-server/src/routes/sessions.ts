@@ -447,23 +447,17 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
   }
 
   if (parsed.data.status === "cancelled") {
-    const [logCountResult] = await db
-      .select({ cnt: count() })
-      .from(sessionLogsTable)
-      .where(eq(sessionLogsTable.sessionId, params.data.id));
-
-    if (Number(logCountResult.cnt) === 0) {
-      const detail = await getSessionDetail(params.data.id);
-      await db.delete(sessionLogsTable).where(eq(sessionLogsTable.sessionId, params.data.id));
-      await db.delete(sessionsTable).where(eq(sessionsTable.id, params.data.id));
-      res.json(UpdateSessionStatusResponse.parse({
-        ...detail!,
-        status: "cancelled",
-        completedAt: parsed.data.completedAt ?? new Date(),
-        deleted: true,
-      }));
-      return;
-    }
+    const detail = await getSessionDetail(params.data.id);
+    await db.delete(sessionSetNotesTable).where(eq(sessionSetNotesTable.sessionId, params.data.id));
+    await db.delete(sessionLogsTable).where(eq(sessionLogsTable.sessionId, params.data.id));
+    await db.delete(sessionsTable).where(eq(sessionsTable.id, params.data.id));
+    res.json(UpdateSessionStatusResponse.parse({
+      ...detail!,
+      status: "cancelled",
+      completedAt: parsed.data.completedAt ?? new Date(),
+      deleted: true,
+    }));
+    return;
   }
 
   if (existing.planId) {

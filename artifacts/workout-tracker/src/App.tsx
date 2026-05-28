@@ -12,7 +12,6 @@ import PlanFormPage from "@/pages/plan-form";
 import PlanDetailPage from "@/pages/plan-detail";
 import SessionPage from "@/pages/session";
 import LogPastPage from "@/pages/log-past";
-import HistoryPage from "@/pages/history";
 import SessionDetailPage from "@/pages/session-detail";
 import UsersPage from "@/pages/users";
 import LoginPage from "@/pages/login";
@@ -42,7 +41,7 @@ function AuthenticatedRoutes() {
         <Route path="/plans/:id" component={PlanDetailPage} />
         <Route path="/session/:planId" component={SessionPage} />
         <Route path="/log-past/:planId" component={LogPastPage} />
-        <Route path="/history" component={HistoryPage} />
+        <Route path="/history"><Redirect to="/" /></Route>
         <Route path="/history/:id" component={SessionDetailPage} />
         <Route path="/users" component={UsersPage} />
         <Route path="/login"><Redirect to="/" /></Route>

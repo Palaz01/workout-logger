@@ -1,6 +1,6 @@
 import { ReactNode, useRef, useState, useEffect, useCallback } from "react";
 import { Link, useRoute } from "wouter";
-import { Dumbbell, ScrollText, History, Users, LogOut } from "lucide-react";
+import { Dumbbell, ScrollText, Users, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { PersonSwitcher } from "@/components/PersonSwitcher";
@@ -18,8 +18,6 @@ interface LayoutProps {
 export function Layout({ children, title, action, backTo }: LayoutProps) {
   const [isHome] = useRoute("/");
   const [isExercises] = useRoute("/exercises");
-  const [isHistory] = useRoute("/history");
-  const [isHistoryDetail] = useRoute("/history/:id");
   const [isUsers] = useRoute("/users");
 
   const { isTrainer } = useUserContext();
@@ -138,20 +136,6 @@ export function Layout({ children, title, action, backTo }: LayoutProps) {
                 )}
               </div>
               <span className="text-[10px] font-medium">Plans</span>
-            </div>
-          </Link>
-          <Link href="/history" className="flex-1 flex justify-center">
-            <div className={cn(
-              "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors duration-200",
-              (isHistory || isHistoryDetail) ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            )}>
-              <div className="relative">
-                <History className="w-6 h-6" strokeWidth={(isHistory || isHistoryDetail) ? 2.5 : 2} />
-                {(isHistory || isHistoryDetail) && (
-                  <motion.div layoutId="nav-indicator" className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
-                )}
-              </div>
-              <span className="text-[10px] font-medium">History</span>
             </div>
           </Link>
           <Link href="/exercises" className="flex-1 flex justify-center">

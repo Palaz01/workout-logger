@@ -2,7 +2,7 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/Button";
 import { usePlans, usePlanMutations } from "@/hooks/use-plans";
 import { useSessionMutations } from "@/hooks/use-sessions";
-import { useScheduledSessions } from "@/hooks/use-history";
+import { useScheduledSessions, useSessionHistory } from "@/hooks/use-history";
 import { useUserContext } from "@/contexts/UserContext";
 import {
   Plus,
@@ -18,6 +18,9 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  Check,
+  Clock,
+  Dumbbell,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -28,6 +31,7 @@ import {
   isSameDay,
   startOfDay,
   isBefore,
+  formatDistanceStrict,
 } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useMemo, useRef, useState } from "react";
@@ -50,13 +54,14 @@ import { cn } from "@/lib/utils";
 export default function HomePage() {
   const { data: plans, isLoading } = usePlans();
   const { data: scheduled, isLoading: scheduledLoading } = useScheduledSessions();
+  const { data: history, isLoading: historyLoading } = useSessionHistory();
   const { deletePlan } = usePlanMutations();
   const { schedule, activateScheduled, cancel } = useSessionMutations();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isTrainer } = useUserContext();
 
-  const [tab, setTab] = useState<"scheduled" | "unscheduled">("scheduled");
+  const [tab, setTab] = useState<"calendar" | "unscheduled">("calendar");
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<{ id: number; name: string } | null>(null);
   const [scheduleDate, setScheduleDate] = useState<string>(() => format(new Date(), "yyyy-MM-dd"));
@@ -96,21 +101,32 @@ export default function HomePage() {
   );
 
   const sessionsByDay = useMemo(() => {
-    const map = new Map<string, SessionSummary[]>();
-    if (!scheduled) return map;
-    for (const s of scheduled) {
+    const map = new Map<string, { scheduled: SessionSummary[]; completed: SessionSummary[] }>();
+    const ensure = (key: string) => {
+      if (!map.has(key)) map.set(key, { scheduled: [], completed: [] });
+      return map.get(key)!;
+    };
+    for (const s of scheduled ?? []) {
       if (!s.scheduledFor) continue;
       const key = format(startOfDay(new Date(s.scheduledFor)), "yyyy-MM-dd");
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(s);
+      ensure(key).scheduled.push(s);
+    }
+    for (const s of history ?? []) {
+      if (s.status !== "completed") continue;
+      const ref = s.startedAt ?? s.completedAt;
+      if (!ref) continue;
+      const key = format(startOfDay(new Date(ref)), "yyyy-MM-dd");
+      ensure(key).completed.push(s);
     }
     return map;
-  }, [scheduled]);
+  }, [scheduled, history]);
 
-  const selectedDaySessions = useMemo(
-    () => sessionsByDay.get(format(selectedDay, "yyyy-MM-dd")) ?? [],
+  const selectedDayEntry = useMemo(
+    () => sessionsByDay.get(format(selectedDay, "yyyy-MM-dd")) ?? { scheduled: [], completed: [] },
     [sessionsByDay, selectedDay]
   );
+  const selectedDayHasAny =
+    selectedDayEntry.scheduled.length + selectedDayEntry.completed.length > 0;
 
   const scheduledPlanIds = useMemo(() => {
     const set = new Set<number>();
@@ -142,7 +158,7 @@ export default function HomePage() {
         onSuccess: () => {
           toast({ title: "Workout scheduled", description: format(date, "EEE, MMM d, yyyy") });
           setScheduleTarget(null);
-          setTab("scheduled");
+          setTab("calendar");
           setSelectedDay(startOfDay(date));
           setWeekStart(startOfWeek(date, { weekStartsOn: 1 }));
         },
@@ -206,10 +222,10 @@ export default function HomePage() {
       }
     >
       <div className="p-4 pb-20 relative">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "scheduled" | "unscheduled")}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "calendar" | "unscheduled")}>
           <TabsList className="grid grid-cols-2 w-full h-11 mb-4">
-            <TabsTrigger value="scheduled" className="text-sm font-semibold">
-              Scheduled
+            <TabsTrigger value="calendar" className="text-sm font-semibold">
+              Calendar
               {scheduled && scheduled.length > 0 && (
                 <span className="ml-1.5 text-[10px] bg-primary/20 text-primary rounded-full px-1.5 py-0.5 font-bold">
                   {scheduled.length}
@@ -221,7 +237,7 @@ export default function HomePage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="scheduled" className="mt-0">
+          <TabsContent value="calendar" className="mt-0">
             <div
               className="bg-card rounded-2xl card-shadow p-3 mb-4 select-none"
               onTouchStart={handleTouchStart}
@@ -251,9 +267,14 @@ export default function HomePage() {
               <div className="grid grid-cols-7 gap-1">
                 {weekDays.map((day) => {
                   const key = format(day, "yyyy-MM-dd");
-                  const count = sessionsByDay.get(key)?.length ?? 0;
+                  const entry = sessionsByDay.get(key);
+                  const schedCount = entry?.scheduled.length ?? 0;
+                  const doneCount = entry?.completed.length ?? 0;
                   const isSelected = isSameDay(day, selectedDay);
                   const isToday = isSameDay(day, today);
+                  const labelParts: string[] = [];
+                  if (schedCount > 0) labelParts.push(`${schedCount} scheduled`);
+                  if (doneCount > 0) labelParts.push(`${doneCount} completed`);
                   return (
                     <button
                       key={key}
@@ -261,7 +282,7 @@ export default function HomePage() {
                       onClick={() => setSelectedDay(startOfDay(day))}
                       aria-pressed={isSelected}
                       aria-current={isToday ? "date" : undefined}
-                      aria-label={`${format(day, "EEEE, MMMM d, yyyy")}${count > 0 ? `, ${count} scheduled` : ""}`}
+                      aria-label={`${format(day, "EEEE, MMMM d, yyyy")}${labelParts.length ? `, ${labelParts.join(", ")}` : ""}`}
                       className={cn(
                         "flex flex-col items-center justify-center py-2 rounded-xl transition-all relative",
                         isSelected
@@ -277,13 +298,26 @@ export default function HomePage() {
                       <span className="text-base font-bold leading-tight mt-0.5">
                         {format(day, "d")}
                       </span>
-                      {count > 0 && (
-                        <span
-                          className={cn(
-                            "absolute bottom-1 w-1.5 h-1.5 rounded-full",
-                            isSelected ? "bg-primary-foreground" : "bg-primary"
+                      {(schedCount > 0 || doneCount > 0) && (
+                        <span className="absolute bottom-1 flex items-center gap-0.5">
+                          {doneCount > 0 && (
+                            <Check
+                              className={cn(
+                                "w-2.5 h-2.5",
+                                isSelected ? "text-primary-foreground" : "text-green-600"
+                              )}
+                              strokeWidth={3.5}
+                            />
                           )}
-                        />
+                          {schedCount > 0 && (
+                            <span
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                isSelected ? "bg-primary-foreground" : "bg-primary"
+                              )}
+                            />
+                          )}
+                        </span>
                       )}
                     </button>
                   );
@@ -291,23 +325,23 @@ export default function HomePage() {
               </div>
             </div>
 
-            {scheduledLoading ? (
+            {scheduledLoading || historyLoading ? (
               <div className="flex justify-center p-8">
                 <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
               </div>
-            ) : selectedDaySessions.length === 0 ? (
+            ) : !selectedDayHasAny ? (
               <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                 <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                   <CalendarClock className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-base font-bold mb-1">Nothing scheduled</h3>
+                <h3 className="text-base font-bold mb-1">Nothing here</h3>
                 <p className="text-sm text-muted-foreground">
                   No workouts on {format(selectedDay, "EEE, MMM d")}.
                 </p>
               </div>
             ) : (
               <div className="grid gap-3">
-                {selectedDaySessions.map((session) => {
+                {selectedDayEntry.scheduled.map((session) => {
                   const date = session.scheduledFor ? new Date(session.scheduledFor) : null;
                   const isPast = date ? isBefore(startOfDay(date), today) : false;
                   const isReady = date ? !isBefore(today, startOfDay(date)) : false;
@@ -354,6 +388,47 @@ export default function HomePage() {
                         </button>
                       </div>
                     </div>
+                  );
+                })}
+                {selectedDayEntry.completed.map((session) => {
+                  const startedAt = session.startedAt ? new Date(session.startedAt) : null;
+                  const completedAt = session.completedAt ? new Date(session.completedAt) : null;
+                  const duration =
+                    startedAt && completedAt
+                      ? formatDistanceStrict(startedAt, completedAt)
+                      : "\u2014";
+                  const displayDate = startedAt ?? completedAt;
+                  return (
+                    <Link
+                      key={session.id}
+                      href={`/history/${session.id}`}
+                      className="block bg-card rounded-2xl card-shadow hover:card-shadow-hover transition-shadow relative overflow-hidden p-4"
+                    >
+                      <div className="absolute -right-4 -top-4 w-20 h-20 bg-green-500/5 rounded-full blur-2xl pointer-events-none" />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <h3 className="font-bold text-base leading-tight truncate flex-1 min-w-0">
+                          {session.planName}
+                        </h3>
+                        <span className="text-[10px] font-semibold text-green-600 bg-green-500/10 px-1.5 py-0.5 rounded flex-shrink-0 ml-2 flex items-center gap-1">
+                          <Check className="w-3 h-3" strokeWidth={3} />
+                          Completed
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {displayDate ? format(displayDate, "EEE, MMM d") : "\u2014"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          {duration}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Dumbbell className="w-3.5 h-3.5" />
+                          {session.logCount} logged
+                        </span>
+                      </div>
+                    </Link>
                   );
                 })}
               </div>

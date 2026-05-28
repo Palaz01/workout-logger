@@ -95,7 +95,7 @@ export default function SessionDetailPage() {
     remove.mutate(session.id, {
       onSuccess: () => {
         toast({ title: "Session deleted" });
-        setLocation("/history");
+        setLocation("/");
       },
       onError: (err: unknown) => {
         const message = err instanceof Error ? err.message : "Failed to delete session";
@@ -107,7 +107,7 @@ export default function SessionDetailPage() {
 
   if (isLoading) {
     return (
-      <Layout title="Session" backTo="/history">
+      <Layout title="Session" backTo="/">
         <div className="flex justify-center p-8">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
@@ -117,7 +117,7 @@ export default function SessionDetailPage() {
 
   if (!session) {
     return (
-      <Layout title="Session" backTo="/history">
+      <Layout title="Session" backTo="/">
         <div className="p-4 text-center text-muted-foreground">
           Session not found.
         </div>
@@ -146,7 +146,7 @@ export default function SessionDetailPage() {
   ])];
 
   return (
-    <Layout title={session.planName} backTo="/history">
+    <Layout title={session.planName} backTo="/">
       <div className="p-4 space-y-5 pb-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
