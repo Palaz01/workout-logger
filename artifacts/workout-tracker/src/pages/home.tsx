@@ -30,7 +30,7 @@ import {
   isBefore,
 } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Modal } from "@/components/Modal";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -64,6 +64,22 @@ export default function HomePage() {
 
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedDay, setSelectedDay] = useState(() => startOfDay(new Date()));
+
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+    shiftWeek(dx < 0 ? 1 : -1);
+  };
 
   const shiftWeek = (delta: number) => {
     const newStart = addWeeks(weekStart, delta);
@@ -206,7 +222,11 @@ export default function HomePage() {
           </TabsList>
 
           <TabsContent value="scheduled" className="mt-0">
-            <div className="bg-card rounded-2xl card-shadow p-3 mb-4">
+            <div
+              className="bg-card rounded-2xl card-shadow p-3 mb-4 select-none"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
               <div className="flex items-center justify-between mb-3 px-1">
                 <button
                   type="button"
