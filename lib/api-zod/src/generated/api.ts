@@ -252,6 +252,45 @@ export const DeleteExerciseParams = zod.object({
 });
 
 /**
+ * @summary Get recent completed-session logs for an exercise
+ */
+export const GetExerciseHistoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const getExerciseHistoryQueryLimitMax = 200;
+
+export const GetExerciseHistoryQueryParams = zod.object({
+  userId: zod.coerce.number().describe("User to fetch history for"),
+  since: zod
+    .date()
+    .optional()
+    .describe("Only include sessions completed on or after this timestamp"),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getExerciseHistoryQueryLimitMax)
+    .optional()
+    .describe("Maximum number of log entries to return (default 200)"),
+});
+
+export const GetExerciseHistoryResponse = zod.object({
+  entries: zod.array(
+    zod.object({
+      sessionId: zod.number(),
+      sessionDate: zod.date(),
+      planId: zod.number().nullish(),
+      planName: zod.string(),
+      planSetId: zod.number().nullish(),
+      roundNumber: zod.number(),
+      weight: zod.number().nullish(),
+      value: zod.number().nullish(),
+      measurementType: zod.enum(["reps", "seconds", "meters"]),
+    }),
+  ),
+});
+
+/**
  * @summary List workout plans
  */
 export const ListPlansQueryParams = zod.object({

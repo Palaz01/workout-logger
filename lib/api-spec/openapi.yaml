@@ -356,6 +356,42 @@ paths:
         "204":
           description: Deleted
 
+  /exercises/{id}/history:
+    get:
+      operationId: getExerciseHistory
+      tags: [exercises]
+      summary: Get recent completed-session logs for an exercise
+      parameters:
+        - $ref: "#/components/parameters/ExerciseId"
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: User to fetch history for
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Only include sessions completed on or after this timestamp
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+          description: Maximum number of log entries to return (default 200)
+      responses:
+        "200":
+          description: Exercise history entries (most recent session first)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExerciseHistoryResponse"
+
   /plans:
     get:
       operationId: listPlans
@@ -940,6 +976,50 @@ components:
         - name
         - measurementType
         - createdAt
+
+    ExerciseHistoryEntry:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+        sessionDate:
+          type: string
+          format: date-time
+        planId:
+          type: integer
+          nullable: true
+        planName:
+          type: string
+        planSetId:
+          type: integer
+          nullable: true
+        roundNumber:
+          type: integer
+        weight:
+          type: number
+          nullable: true
+        value:
+          type: number
+          nullable: true
+        measurementType:
+          type: string
+          enum: [reps, seconds, meters]
+      required:
+        - sessionId
+        - sessionDate
+        - planName
+        - roundNumber
+        - measurementType
+
+    ExerciseHistoryResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExerciseHistoryEntry"
+      required:
+        - entries
 
     CreateExerciseBody:
       type: object

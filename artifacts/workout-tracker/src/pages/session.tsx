@@ -5,6 +5,7 @@ import { Input } from "@/components/Input";
 import { Modal } from "@/components/Modal";
 import { usePlan } from "@/hooks/use-plans";
 import { useSessionMutations, useLastSession, useActiveSession } from "@/hooks/use-sessions";
+import { useExerciseHistory, type HistoryPeriod } from "@/hooks/use-exercises";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardHeight } from "@/hooks/use-keyboard-height";
 import {
@@ -22,7 +23,7 @@ import {
   Activity,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { PlanDetail, SessionLogEntry } from "@workspace/api-client-react";
+import type { PlanDetail } from "@workspace/api-client-react";
 
 interface Step {
   type: "exercise" | "set-summary" | "set-note" | "conditioning";
@@ -358,84 +359,19 @@ export default function SessionPage() {
     }));
   };
 
-  const lastLogs = lastSessionData?.session?.logs ?? [];
   const lastSetNotes = lastSessionData?.session?.setNotes ?? [];
 
-  interface GroupedSetExercise {
-    exerciseId: number;
-    exerciseName: string;
-    measurementType: string;
-    rounds: SessionLogEntry[];
-  }
-
-  const renderLastStatsModal = (step: Step) => (
-    <Modal
-      isOpen={showLastStats}
-      onClose={() => setShowLastStats(false)}
-      title={`Last: Set ${step.setIndex}`}
-    >
-      <div className="space-y-4">
-        {getLastStatsForSet(step.setId).map((group) => (
-          <div key={group.exerciseId} className="bg-muted/30 rounded-2xl overflow-hidden border border-border/50">
-            <div className="px-4 py-3 border-b border-border/50 flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Dumbbell className="w-4 h-4 text-primary" />
-              </div>
-              <h3 className="font-bold text-sm">{group.exerciseName}</h3>
-            </div>
-            {group.rounds.length > 0 ? (
-              <div className="divide-y divide-border/30">
-                <div className="grid grid-cols-3 px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  <span>Round</span>
-                  <span className="text-center">Weight</span>
-                  <span className="text-right">{getMeasurementLabel(group.measurementType)}</span>
-                </div>
-                {group.rounds.map((round) => (
-                  <div key={round.id} className="grid grid-cols-3 px-4 py-3 items-center">
-                    <span className="text-sm font-medium text-muted-foreground">#{round.roundNumber}</span>
-                    <span className="text-sm font-bold text-center">{round.weight != null ? `${round.weight} kg` : "—"}</span>
-                    <span className="text-sm font-bold text-primary text-right">{round.value != null ? `${round.value} ${getMeasurementLabel(group.measurementType)}` : "—"}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="px-4 py-4 text-center text-sm text-muted-foreground">
-                No data
-              </div>
-            )}
-          </div>
-        ))}
-        {(() => {
-          const lastNote = lastSetNotes.find((n) => n.planSetId === step.setId);
-          return lastNote ? (
-            <div className="flex items-start gap-2.5 px-3 py-3 bg-muted/40 rounded-xl border border-border/30">
-              <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-muted-foreground italic leading-relaxed">{lastNote.note}</p>
-            </div>
-          ) : null;
-        })()}
-      </div>
-    </Modal>
-  );
-
-  const getLastStatsForSet = (setId: number): GroupedSetExercise[] => {
-    const currentSet = plan?.sets.find((s) => s.id === setId);
-    if (!currentSet) return [];
-
-    const currentExercises = [...currentSet.exercises].sort(
-      (a, b) => a.orderIndex - b.orderIndex
+  const renderLastStatsModal = (step: Step) => {
+    const lastNote = lastSetNotes.find((n) => n.planSetId === step.setId);
+    return (
+      <LastStatsModal
+        isOpen={showLastStats}
+        onClose={() => setShowLastStats(false)}
+        step={step}
+        plan={plan}
+        lastNote={lastNote?.note ?? null}
+      />
     );
-
-    return currentExercises.map((ex) => {
-      const exerciseLogs = lastLogs.filter((l) => l.exerciseId === ex.exerciseId);
-      const sorted = [...exerciseLogs].sort((a, b) => a.roundNumber - b.roundNumber);
-      return {
-        exerciseId: ex.exerciseId,
-        exerciseName: ex.exerciseName,
-        measurementType: ex.exerciseMeasurementType,
-        rounds: sorted,
-      };
-    });
   };
 
   if (planLoading || activeLoading || start.isPending) {
@@ -603,15 +539,13 @@ export default function SessionPage() {
                 )}
               </div>
 
-              {lastSessionData?.session && (
-                <button
-                  onClick={() => setShowLastStats(true)}
-                  className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                >
-                  <History className="w-4 h-4" />
-                  Last Stats
-                </button>
-              )}
+              <button
+                onClick={() => setShowLastStats(true)}
+                className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <History className="w-4 h-4" />
+                Last Stats
+              </button>
             </motion.div>
           </AnimatePresence>
         </main>
@@ -991,15 +925,13 @@ export default function SessionPage() {
           <span className="bg-muted px-2.5 py-1 rounded-lg">
             Round {currentStep.roundNumber}/{currentStep.totalRounds}
           </span>
-          {lastSessionData?.session && (
-            <button
-              onClick={() => setShowLastStats(true)}
-              className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <History className="w-3 h-3" />
-              <span className="text-[11px]">Last Stats</span>
-            </button>
-          )}
+          <button
+            onClick={() => setShowLastStats(true)}
+            className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <History className="w-3 h-3" />
+            <span className="text-[11px]">Last Stats</span>
+          </button>
         </div>
 
         <AnimatePresence mode="wait" custom={direction}>
@@ -1148,6 +1080,185 @@ export default function SessionPage() {
       </Modal>
 
       {renderLastStatsModal(currentStep)}
+    </div>
+  );
+}
+
+interface LastStatsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  step: Step;
+  plan: PlanDetail | undefined;
+  lastNote: string | null;
+}
+
+const PERIOD_OPTIONS: { value: HistoryPeriod; label: string; longLabel: string }[] = [
+  { value: "2w", label: "2W", longLabel: "2 weeks" },
+  { value: "1m", label: "1M", longLabel: "1 month" },
+  { value: "3m", label: "3M", longLabel: "3 months" },
+  { value: "all", label: "All", longLabel: "all time" },
+];
+
+function LastStatsModal({ isOpen, onClose, step, plan, lastNote }: LastStatsModalProps) {
+  const [period, setPeriod] = useState<HistoryPeriod>("1m");
+
+  const exercises = useMemo(() => {
+    if (!plan) return [];
+    const currentSet = plan.sets.find((s) => s.id === step.setId);
+    if (!currentSet) return [];
+    return [...currentSet.exercises].sort((a, b) => a.orderIndex - b.orderIndex);
+  }, [plan, step.setId]);
+
+  const periodLabel = PERIOD_OPTIONS.find((p) => p.value === period)?.longLabel ?? "1 month";
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Last: Set ${step.setIndex}`}>
+      <div className="space-y-4">
+        <div className="flex items-center gap-1 p-1 bg-muted rounded-xl">
+          {PERIOD_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPeriod(opt.value)}
+              className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                period === opt.value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {exercises.map((ex) => (
+          <ExerciseHistoryBlock
+            key={ex.exerciseId}
+            exerciseId={ex.exerciseId}
+            exerciseName={ex.exerciseName}
+            fallbackMeasurementType={ex.exerciseMeasurementType}
+            period={period}
+            periodLabel={periodLabel}
+            enabled={isOpen}
+          />
+        ))}
+        {lastNote ? (
+          <div className="flex items-start gap-2.5 px-3 py-3 bg-muted/40 rounded-xl border border-border/30">
+            <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground italic leading-relaxed">{lastNote}</p>
+          </div>
+        ) : null}
+      </div>
+    </Modal>
+  );
+}
+
+interface ExerciseHistoryBlockProps {
+  exerciseId: number;
+  exerciseName: string;
+  fallbackMeasurementType: string;
+  period: HistoryPeriod;
+  periodLabel: string;
+  enabled: boolean;
+}
+
+function ExerciseHistoryBlock({
+  exerciseId,
+  exerciseName,
+  fallbackMeasurementType,
+  period,
+  periodLabel,
+  enabled,
+}: ExerciseHistoryBlockProps) {
+  const { data, isLoading } = useExerciseHistory(exerciseId, period, enabled);
+  const entries = data?.entries ?? [];
+
+  const measurementType =
+    entries[0]?.measurementType ?? fallbackMeasurementType;
+  const unitLabel = getMeasurementLabel(measurementType);
+
+  const groupedBySession = useMemo(() => {
+    const map = new Map<
+      number,
+      { sessionId: number; sessionDate: string; planName: string; rounds: typeof entries }
+    >();
+    for (const entry of entries) {
+      const existing = map.get(entry.sessionId);
+      if (existing) {
+        existing.rounds.push(entry);
+      } else {
+        map.set(entry.sessionId, {
+          sessionId: entry.sessionId,
+          sessionDate: entry.sessionDate,
+          planName: entry.planName,
+          rounds: [entry],
+        });
+      }
+    }
+    return Array.from(map.values()).map((g) => ({
+      ...g,
+      rounds: [...g.rounds].sort((a, b) => a.roundNumber - b.roundNumber),
+    }));
+  }, [entries]);
+
+  return (
+    <div className="bg-muted/30 rounded-2xl overflow-hidden border border-border/50">
+      <div className="px-4 py-3 border-b border-border/50 flex items-center gap-3">
+        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+          <Dumbbell className="w-4 h-4 text-primary" />
+        </div>
+        <h3 className="font-bold text-sm">{exerciseName}</h3>
+      </div>
+      {isLoading ? (
+        <div className="px-4 py-4 space-y-2">
+          <div className="h-3 bg-muted rounded animate-pulse" />
+          <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
+        </div>
+      ) : groupedBySession.length === 0 ? (
+        <div className="px-4 py-4 text-center text-xs text-muted-foreground">
+          No data in the last {periodLabel}.
+          {period !== "all" && <div className="mt-1 text-[11px] opacity-70">Try widening the period.</div>}
+        </div>
+      ) : (
+        <div className="divide-y divide-border/30">
+          {groupedBySession.map((session) => (
+            <div key={session.sessionId} className="px-4 py-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  {new Date(session.sessionDate).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+                <span className="text-[10px] text-muted-foreground/70 truncate ml-2 max-w-[50%]">
+                  {session.planName}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 px-1 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <span>Round</span>
+                <span className="text-center">Weight</span>
+                <span className="text-right">{unitLabel}</span>
+              </div>
+              {session.rounds.map((round, idx) => (
+                <div
+                  key={`${round.sessionId}-${round.roundNumber}-${idx}`}
+                  className="grid grid-cols-3 px-1 py-1.5 items-center"
+                >
+                  <span className="text-sm font-medium text-muted-foreground">
+                    #{round.roundNumber}
+                  </span>
+                  <span className="text-sm font-bold text-center">
+                    {round.weight != null ? `${round.weight} kg` : "—"}
+                  </span>
+                  <span className="text-sm font-bold text-primary text-right">
+                    {round.value != null ? `${round.value} ${unitLabel}` : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

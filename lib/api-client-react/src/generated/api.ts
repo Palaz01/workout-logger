@@ -25,7 +25,9 @@ import type {
   CreatePlanBody,
   CreateUserBody,
   Exercise,
+  ExerciseHistoryResponse,
   GetActiveSessionParams,
+  GetExerciseHistoryParams,
   GetLastSessionParams,
   HealthStatus,
   InvitationDetail,
@@ -1637,6 +1639,119 @@ export const useDeleteExercise = <
 > => {
   return useMutation(getDeleteExerciseMutationOptions(options));
 };
+
+/**
+ * @summary Get recent completed-session logs for an exercise
+ */
+export const getGetExerciseHistoryUrl = (
+  id: number,
+  params: GetExerciseHistoryParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/exercises/${id}/history?${stringifiedParams}`
+    : `/api/exercises/${id}/history`;
+};
+
+export const getExerciseHistory = async (
+  id: number,
+  params: GetExerciseHistoryParams,
+  options?: RequestInit,
+): Promise<ExerciseHistoryResponse> => {
+  return customFetch<ExerciseHistoryResponse>(
+    getGetExerciseHistoryUrl(id, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetExerciseHistoryQueryKey = (
+  id: number,
+  params?: GetExerciseHistoryParams,
+) => {
+  return [`/api/exercises/${id}/history`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetExerciseHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExerciseHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params: GetExerciseHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getExerciseHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetExerciseHistoryQueryKey(id, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getExerciseHistory>>
+  > = ({ signal }) =>
+    getExerciseHistory(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getExerciseHistory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetExerciseHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getExerciseHistory>>
+>;
+export type GetExerciseHistoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get recent completed-session logs for an exercise
+ */
+
+export function useGetExerciseHistory<
+  TData = Awaited<ReturnType<typeof getExerciseHistory>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params: GetExerciseHistoryParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getExerciseHistory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetExerciseHistoryQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List workout plans

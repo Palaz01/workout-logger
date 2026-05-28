@@ -14,6 +14,7 @@ import {
   getListSessionsQueryKey,
 } from "@workspace/api-client-react";
 import { useUserContext } from "@/contexts/UserContext";
+import { useInvalidateExerciseHistory } from "@/hooks/use-exercises";
 
 export function useSession(id: number) {
   return useGetSession(id);
@@ -92,6 +93,8 @@ export function useSessionMutations() {
     },
   });
 
+  const invalidateExerciseHistory = useInvalidateExerciseHistory();
+
   const complete = useMutation({
     mutationFn: (sessionId: number) =>
       updateSessionStatus(sessionId, { status: "completed" }),
@@ -108,6 +111,7 @@ export function useSessionMutations() {
       queryClient.invalidateQueries({
         queryKey: getListSessionsQueryKey(),
       });
+      invalidateExerciseHistory();
     },
   });
 

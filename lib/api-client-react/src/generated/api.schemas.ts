@@ -170,6 +170,31 @@ export interface Exercise {
   createdAt: string;
 }
 
+export type ExerciseHistoryEntryMeasurementType =
+  (typeof ExerciseHistoryEntryMeasurementType)[keyof typeof ExerciseHistoryEntryMeasurementType];
+
+export const ExerciseHistoryEntryMeasurementType = {
+  reps: "reps",
+  seconds: "seconds",
+  meters: "meters",
+} as const;
+
+export interface ExerciseHistoryEntry {
+  sessionId: number;
+  sessionDate: string;
+  planId?: number | null;
+  planName: string;
+  planSetId?: number | null;
+  roundNumber: number;
+  weight?: number | null;
+  value?: number | null;
+  measurementType: ExerciseHistoryEntryMeasurementType;
+}
+
+export interface ExerciseHistoryResponse {
+  entries: ExerciseHistoryEntry[];
+}
+
 export type CreateExerciseBodyMeasurementType =
   (typeof CreateExerciseBodyMeasurementType)[keyof typeof CreateExerciseBodyMeasurementType];
 
@@ -449,6 +474,23 @@ export interface LastSessionResponse {
 
 export type VerifyEmailParams = {
   token: string;
+};
+
+export type GetExerciseHistoryParams = {
+  /**
+   * User to fetch history for
+   */
+  userId: number;
+  /**
+   * Only include sessions completed on or after this timestamp
+   */
+  since?: string;
+  /**
+   * Maximum number of log entries to return (default 200)
+   * @minimum 1
+   * @maximum 200
+   */
+  limit?: number;
 };
 
 export type ListPlansParams = {
