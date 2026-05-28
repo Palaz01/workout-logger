@@ -8,6 +8,8 @@ import { usePlan, usePlanMutations } from "@/hooks/use-plans";
 import { useExercises } from "@/hooks/use-exercises";
 import { useUsers } from "@/hooks/use-users";
 import { useUserContext } from "@/contexts/UserContext";
+import { useSessionMutations } from "@/hooks/use-sessions";
+import { format } from "date-fns";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -73,11 +75,13 @@ export default function PlanFormPage() {
   const { data: exercises } = useExercises();
   const { data: initialPlan, isLoading: isLoadingPlan } = usePlan(planId);
   const { createPlan, updatePlan, isCreating, isUpdating } = usePlanMutations();
+  const { schedule } = useSessionMutations();
   const { data: users } = useUsers();
 
   const [isGlobal, setIsGlobal] = useState(true);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [assignError, setAssignError] = useState("");
+  const [scheduleForDate, setScheduleForDate] = useState<string>("");
 
   const allUsers = users ?? [];
   const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
@@ -168,8 +172,29 @@ export default function PlanFormPage() {
         await updatePlan({ id: planId, data: formattedData });
         toast({ title: "Plan updated successfully" });
       } else {
-        await createPlan({ data: formattedData });
-        toast({ title: "Plan created successfully" });
+        const created = await createPlan({ data: formattedData });
+        if (scheduleForDate) {
+          const scheduledFor = new Date(`${scheduleForDate}T09:00:00`);
+          if (!isNaN(scheduledFor.getTime())) {
+            try {
+              await schedule.mutateAsync({ planId: created.id, scheduledFor });
+              toast({
+                title: "Plan created & scheduled",
+                description: format(scheduledFor, "EEE, MMM d, yyyy"),
+              });
+            } catch {
+              toast({
+                title: "Plan created (scheduling failed)",
+                description: "You can schedule it from the plans page.",
+                variant: "destructive",
+              });
+            }
+          } else {
+            toast({ title: "Plan created successfully" });
+          }
+        } else {
+          toast({ title: "Plan created successfully" });
+        }
       }
       setLocation("/");
     } catch (e) {
@@ -191,12 +216,29 @@ export default function PlanFormPage() {
       backTo="/"
     >
       <form id="plan-form" onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-6 pb-32">
-        <div className="bg-card p-5 rounded-2xl card-shadow">
+        <div className="bg-card p-5 rounded-2xl card-shadow space-y-4">
           <Input 
             label="Plan Name" 
             placeholder="e.g. Push Day" 
             {...register("name")}
           />
+          {!isEdit && (
+            <div>
+              <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+                Schedule for <span className="text-muted-foreground/70 normal-case font-medium">(optional)</span>
+              </label>
+              <input
+                type="date"
+                value={scheduleForDate}
+                min={format(new Date(), "yyyy-MM-dd")}
+                onChange={(e) => setScheduleForDate(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-muted/30 text-sm font-medium focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Pick a date to immediately schedule this workout after creation.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="bg-card p-5 rounded-2xl card-shadow space-y-3">
