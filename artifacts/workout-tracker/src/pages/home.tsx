@@ -171,13 +171,27 @@ export default function HomePage() {
                   )}
                 </div>
 
-                <Button 
-                  className="w-full gap-2 shadow-none border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                  onClick={(e) => { e.stopPropagation(); setLocation(`/session/${plan.id}`); }}
-                >
-                  <Play className="w-4 h-4 fill-current" />
-                  Start Workout
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 gap-2 shadow-none border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                    onClick={(e) => { e.stopPropagation(); setLocation(`/session/${plan.id}`); }}
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    Start Workout
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Schedule workout"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setScheduleTarget({ id: plan.id, name: plan.name });
+                      setScheduleDate(format(new Date(), "yyyy-MM-dd"));
+                    }}
+                  >
+                    <CalendarClock className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
