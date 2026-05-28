@@ -79,9 +79,11 @@ async function getSessionDetail(sessionId: number) {
 
   const logs = rawLogs.map((log) => {
     const isConditioning =
-      log.exerciseId == null ||
       log.liveSetType === "conditioning" ||
-      log.snapshotSetDescription != null;
+      log.snapshotSetDescription != null ||
+      (log.exerciseId == null &&
+        log.snapshotExerciseName == null &&
+        log.liveExerciseName == null);
     const setDescription = isCompleted
       ? (log.snapshotSetDescription ?? log.liveSetDescription ?? null)
       : (log.liveSetDescription ?? log.snapshotSetDescription ?? null);

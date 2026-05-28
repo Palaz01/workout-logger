@@ -521,7 +521,7 @@ export default function SessionPage() {
   }
 
   const currentExerciseIndex = steps.slice(0, currentStepIndex + 1).filter(s => s.type === "exercise").length;
-  const progress = (currentExerciseIndex / exerciseStepCount) * 100;
+  const progress = exerciseStepCount > 0 ? (currentExerciseIndex / exerciseStepCount) * 100 : 0;
 
   if (currentStep.type === "set-summary") {
     return (
