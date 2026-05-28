@@ -167,33 +167,25 @@ router.get("/sessions", async (req, res): Promise<void> => {
   const conditioningRows = sessionIds.length
     ? await db
         .select({
+          logId: sessionLogsTable.id,
           sessionId: sessionLogsTable.sessionId,
           planSetId: sessionLogsTable.planSetId,
           snapshotSetDescription: sessionLogsTable.snapshotSetDescription,
-          snapshotExerciseName: sessionLogsTable.snapshotExerciseName,
-          liveExerciseName: exercisesTable.name,
           liveSetType: planSetsTable.type,
           liveSetDescription: planSetsTable.description,
-          exerciseId: sessionLogsTable.exerciseId,
         })
         .from(sessionLogsTable)
-        .leftJoin(exercisesTable, eq(sessionLogsTable.exerciseId, exercisesTable.id))
         .leftJoin(planSetsTable, eq(sessionLogsTable.planSetId, planSetsTable.id))
         .where(inArray(sessionLogsTable.sessionId, sessionIds))
     : [];
 
   const conditioningBySession = new Map<number, { planSetId: number | null; description: string | null }[]>();
-  const seenKey = new Map<number, Set<string>>();
   for (const r of conditioningRows) {
     const isConditioning =
       r.liveSetType === "conditioning" ||
       (r.liveSetType == null && r.snapshotSetDescription != null);
     if (!isConditioning) continue;
     const description = r.snapshotSetDescription ?? r.liveSetDescription ?? null;
-    const key = `${r.planSetId ?? "null"}`;
-    if (!seenKey.has(r.sessionId)) seenKey.set(r.sessionId, new Set());
-    if (seenKey.get(r.sessionId)!.has(key)) continue;
-    seenKey.get(r.sessionId)!.add(key);
     if (!conditioningBySession.has(r.sessionId)) conditioningBySession.set(r.sessionId, []);
     conditioningBySession.get(r.sessionId)!.push({ planSetId: r.planSetId ?? null, description });
   }
