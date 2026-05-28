@@ -47,6 +47,7 @@ export * from "./sessionDetailStatus";
 export * from "./sessionLogEntry";
 export * from "./sessionLogEntryExerciseMeasurementType";
 export * from "./sessionSummary";
+export * from "./sessionSummaryConditioningEntriesItem";
 export * from "./sessionSummaryStatus";
 export * from "./setExerciseDetail";
 export * from "./setExerciseDetailExerciseMeasurementType";

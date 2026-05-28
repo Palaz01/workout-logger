@@ -337,6 +337,11 @@ export const SessionSummaryStatus = {
   cancelled: "cancelled",
 } as const;
 
+export interface SessionSummaryConditioningEntriesItem {
+  planSetId?: number | null;
+  description: string | null;
+}
+
 export interface SessionSummary {
   id: number;
   planId: number;
@@ -346,6 +351,7 @@ export interface SessionSummary {
   startedAt: string;
   completedAt?: string | null;
   logCount: number;
+  conditioningEntries: SessionSummaryConditioningEntriesItem[];
 }
 
 export type SessionLogEntryExerciseMeasurementType =

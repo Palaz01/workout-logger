@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SessionSummaryStatus } from "./sessionSummaryStatus";
+import type { SessionSummaryConditioningEntriesItem } from "./sessionSummaryConditioningEntriesItem";
 
 export interface SessionSummary {
   id: number;
@@ -16,4 +17,5 @@ export interface SessionSummary {
   startedAt: Date;
   completedAt?: Date | null;
   logCount: number;
+  conditioningEntries: SessionSummaryConditioningEntriesItem[];
 }

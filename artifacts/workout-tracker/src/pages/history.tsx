@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { useSessionHistory } from "@/hooks/use-history";
 import { useSessionMutations } from "@/hooks/use-sessions";
-import { Calendar, Clock, Dumbbell, Trash2, History as HistoryIcon } from "lucide-react";
+import { Calendar, Clock, Dumbbell, Trash2, History as HistoryIcon, Activity, Check } from "lucide-react";
 import { Link } from "wouter";
 import { format, formatDistanceStrict } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -145,6 +145,27 @@ export default function HistoryPage() {
                                 {session.logCount} logged
                               </span>
                             </div>
+                            {session.conditioningEntries && session.conditioningEntries.length > 0 && (
+                              <ul className="mt-2.5 space-y-1.5">
+                                {session.conditioningEntries.map((c, i) => (
+                                  <li
+                                    key={`${c.planSetId ?? "null"}-${i}`}
+                                    className="flex items-start gap-2 text-xs bg-primary/5 border border-primary/10 rounded-lg px-2.5 py-1.5"
+                                  >
+                                    <Activity className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                                    <span className="flex-1 text-foreground/80 line-clamp-2 whitespace-pre-wrap leading-snug">
+                                      {c.description || (
+                                        <span className="italic text-muted-foreground">No description</span>
+                                      )}
+                                    </span>
+                                    <span className="flex items-center gap-0.5 text-[10px] font-semibold text-green-600 dark:text-green-500 flex-shrink-0">
+                                      <Check className="w-3 h-3" />
+                                      Done
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
                           </Link>
 
                           <button

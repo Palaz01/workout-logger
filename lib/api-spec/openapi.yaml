@@ -1231,6 +1231,19 @@ components:
           nullable: true
         logCount:
           type: integer
+        conditioningEntries:
+          type: array
+          items:
+            type: object
+            properties:
+              planSetId:
+                type: integer
+                nullable: true
+              description:
+                type: string
+                nullable: true
+            required:
+              - description
       required:
         - id
         - planId
@@ -1238,6 +1251,7 @@ components:
         - status
         - startedAt
         - logCount
+        - conditioningEntries
 
     SessionLogEntry:
       type: object
