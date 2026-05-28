@@ -56,6 +56,14 @@ async function run() {
       UPDATE session_logs sl SET snapshot_exercise_name = e.name, snapshot_measurement_type = e.measurement_type
       FROM exercises e WHERE sl.exercise_id = e.id AND sl.snapshot_exercise_name IS NULL
     \`);
+    await client.query(\`
+      UPDATE session_logs sl SET snapshot_set_description = ps.description
+      FROM plan_sets ps
+      WHERE sl.plan_set_id = ps.id
+        AND ps.type = 'conditioning'
+        AND sl.snapshot_set_description IS NULL
+        AND ps.description IS NOT NULL
+    \`);
     console.log('Snapshot backfill complete');
   } finally {
     client.release();

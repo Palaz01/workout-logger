@@ -47,12 +47,12 @@ function groupLogsByExercise(logs: SessionLogEntry[]): GroupedExercise[] {
   const groups = new Map<string, GroupedExercise>();
 
   for (const log of logs) {
-    if (log.exerciseId == null) continue;
-    const key = `${log.planSetId}-${log.exerciseId}`;
+    if (log.exerciseName == null) continue;
+    const key = `${log.planSetId}-${log.exerciseId ?? `del-${log.planSetId}`}`;
     if (!groups.has(key)) {
       groups.set(key, {
-        exerciseId: log.exerciseId,
-        exerciseName: log.exerciseName ?? "Deleted Exercise",
+        exerciseId: log.exerciseId ?? 0,
+        exerciseName: log.exerciseName,
         measurementType: log.exerciseMeasurementType ?? "reps",
         planSetId: log.planSetId,
         rounds: [],
@@ -71,7 +71,7 @@ function groupLogsByExercise(logs: SessionLogEntry[]): GroupedExercise[] {
 function getConditioningEntries(logs: SessionLogEntry[]): ConditioningEntry[] {
   const map = new Map<number, ConditioningEntry>();
   for (const log of logs) {
-    if (log.exerciseId != null) continue;
+    if (log.exerciseName != null) continue;
     if (!map.has(log.planSetId)) {
       map.set(log.planSetId, {
         planSetId: log.planSetId,

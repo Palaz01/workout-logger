@@ -772,6 +772,7 @@ export default function SessionPage() {
         {
           onSuccess: () => {
             setConditioningDone((prev) => ({ ...prev, [currentStep.setId]: true }));
+            goNext();
           },
           onError: () => {
             toast({ title: "Failed to mark completed", variant: "destructive" });
@@ -867,7 +868,7 @@ export default function SessionPage() {
               <ChevronLeft className="w-5 h-5 mr-1" />
               Back
             </Button>
-            <Button className="flex-1" onClick={goNext}>
+            <Button className="flex-1" onClick={goNext} disabled={!done}>
               {currentStepIndex === steps.length - 1 ? (
                 <>
                   <Check className="w-5 h-5 mr-1" />
