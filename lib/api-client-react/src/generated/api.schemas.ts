@@ -223,6 +223,7 @@ export const PlanSetInputType = {
   superset: "superset",
   triset: "triset",
   other: "other",
+  conditioning: "conditioning",
 } as const;
 
 export interface PlanSetInput {
@@ -230,6 +231,7 @@ export interface PlanSetInput {
   rounds: number;
   restSeconds?: number | null;
   orderIndex: number;
+  description?: string | null;
   exercises: SetExerciseInput[];
 }
 
@@ -274,6 +276,7 @@ export const PlanSetDetailType = {
   superset: "superset",
   triset: "triset",
   other: "other",
+  conditioning: "conditioning",
 } as const;
 
 export interface PlanSetDetail {
@@ -282,6 +285,7 @@ export interface PlanSetDetail {
   rounds: number;
   restSeconds?: number | null;
   orderIndex: number;
+  description?: string | null;
   exercises: SetExerciseDetail[];
 }
 
@@ -317,10 +321,11 @@ export interface UpdateSessionStatusBody {
 
 export interface UpsertSessionLogBody {
   planSetId: number;
-  exerciseId: number;
+  exerciseId?: number | null;
   roundNumber: number;
   weight?: number | null;
   value?: number | null;
+  setDescription?: string | null;
 }
 
 export type SessionSummaryStatus =
@@ -344,7 +349,8 @@ export interface SessionSummary {
 }
 
 export type SessionLogEntryExerciseMeasurementType =
-  (typeof SessionLogEntryExerciseMeasurementType)[keyof typeof SessionLogEntryExerciseMeasurementType];
+  | (typeof SessionLogEntryExerciseMeasurementType)[keyof typeof SessionLogEntryExerciseMeasurementType]
+  | null;
 
 export const SessionLogEntryExerciseMeasurementType = {
   reps: "reps",
@@ -356,12 +362,13 @@ export interface SessionLogEntry {
   id: number;
   sessionId: number;
   planSetId: number;
-  exerciseId: number;
-  exerciseName: string;
-  exerciseMeasurementType: SessionLogEntryExerciseMeasurementType;
+  exerciseId?: number | null;
+  exerciseName?: string | null;
+  exerciseMeasurementType?: SessionLogEntryExerciseMeasurementType;
   roundNumber: number;
   weight?: number | null;
   value?: number | null;
+  setDescription?: string | null;
 }
 
 export type SessionDetailStatus =

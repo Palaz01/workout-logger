@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { Layout } from "@/components/Layout";
 import { useSessionDetail } from "@/hooks/use-history";
 import { useSessionMutations } from "@/hooks/use-sessions";
-import { Calendar, Clock, Dumbbell, Trash2 } from "lucide-react";
+import { Calendar, Clock, Dumbbell, Trash2, Activity, Check } from "lucide-react";
 import { format, formatDistanceStrict } from "date-fns";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -38,16 +38,22 @@ interface GroupedExercise {
   rounds: SessionLogEntry[];
 }
 
+interface ConditioningEntry {
+  planSetId: number;
+  description: string | null;
+}
+
 function groupLogsByExercise(logs: SessionLogEntry[]): GroupedExercise[] {
   const groups = new Map<string, GroupedExercise>();
 
   for (const log of logs) {
+    if (log.exerciseId == null) continue;
     const key = `${log.planSetId}-${log.exerciseId}`;
     if (!groups.has(key)) {
       groups.set(key, {
         exerciseId: log.exerciseId,
-        exerciseName: log.exerciseName,
-        measurementType: log.exerciseMeasurementType,
+        exerciseName: log.exerciseName ?? "Deleted Exercise",
+        measurementType: log.exerciseMeasurementType ?? "reps",
         planSetId: log.planSetId,
         rounds: [],
       });
@@ -60,6 +66,20 @@ function groupLogsByExercise(logs: SessionLogEntry[]): GroupedExercise[] {
   }
 
   return Array.from(groups.values());
+}
+
+function getConditioningEntries(logs: SessionLogEntry[]): ConditioningEntry[] {
+  const map = new Map<number, ConditioningEntry>();
+  for (const log of logs) {
+    if (log.exerciseId != null) continue;
+    if (!map.has(log.planSetId)) {
+      map.set(log.planSetId, {
+        planSetId: log.planSetId,
+        description: log.setDescription ?? null,
+      });
+    }
+  }
+  return Array.from(map.values());
 }
 
 export default function SessionDetailPage() {
@@ -114,6 +134,8 @@ export default function SessionDetailPage() {
     : "—";
 
   const exerciseGroups = groupLogsByExercise(session.logs);
+  const conditioningEntries = getConditioningEntries(session.logs);
+  const conditioningMap = new Map(conditioningEntries.map((c) => [c.planSetId, c]));
   const setNotes = new Map<number, string>();
   for (const n of (session.setNotes ?? [])) {
     setNotes.set(n.planSetId, n.note);
@@ -121,6 +143,7 @@ export default function SessionDetailPage() {
 
   const setIds = [...new Set([
     ...exerciseGroups.map(g => g.planSetId),
+    ...conditioningEntries.map(c => c.planSetId),
     ...(session.setNotes ?? []).map(n => n.planSetId),
   ])];
 
@@ -176,9 +199,36 @@ export default function SessionDetailPage() {
         <div className="space-y-4">
           {setIds.map((setId, setIdx) => {
             const setGroups = exerciseGroups.filter(g => g.planSetId === setId);
+            const conditioning = conditioningMap.get(setId);
             const note = setNotes.get(setId);
             return (
               <div key={setId} className="space-y-3">
+                {conditioning && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: setIdx * 0.05 }}
+                    className="bg-card rounded-2xl overflow-hidden card-shadow"
+                  >
+                    <div className="px-4 py-3 bg-muted/30 border-b border-border/50 flex items-center gap-3">
+                      <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Activity className="w-4 h-4 text-primary" />
+                      </div>
+                      <h3 className="font-bold text-sm">Conditioning</h3>
+                      <span className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-md">
+                        <Check className="w-3.5 h-3.5" />
+                        Completed
+                      </span>
+                    </div>
+                    <div className="px-4 py-3">
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                        {conditioning.description || (
+                          <span className="text-muted-foreground italic">No description</span>
+                        )}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
                 {setGroups.map((group, index) => (
                   <motion.div
                     key={`${group.planSetId}-${group.exerciseId}`}
@@ -235,7 +285,7 @@ export default function SessionDetailPage() {
             );
           })}
 
-          {exerciseGroups.length === 0 && (
+          {exerciseGroups.length === 0 && conditioningEntries.length === 0 && (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No exercises were logged in this session.
             </div>

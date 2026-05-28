@@ -57,9 +57,20 @@ async function validateOrgOwnership(
   return null;
 }
 
-function validateSetExerciseCounts(sets: Array<{ type: string; exercises: unknown[] }>): string | null {
+function validateSetExerciseCounts(
+  sets: Array<{ type: string; exercises: unknown[]; description?: string | null }>
+): string | null {
   for (let i = 0; i < sets.length; i++) {
     const s = sets[i];
+    if (s.type === "conditioning") {
+      if (s.exercises.length !== 0) {
+        return `Set ${i + 1} (conditioning) must not have exercises`;
+      }
+      if (!s.description || !s.description.trim()) {
+        return `Set ${i + 1} (conditioning) requires a description`;
+      }
+      continue;
+    }
     const expected = SET_TYPE_EXERCISE_COUNTS[s.type];
     if (expected !== null && expected !== undefined && s.exercises.length !== expected) {
       return `Set ${i + 1} (${s.type}) must have exactly ${expected} exercise(s), got ${s.exercises.length}`;
@@ -100,6 +111,7 @@ async function getPlanDetail(planId: number) {
       return {
         ...s,
         restSeconds: s.restSeconds ?? null,
+        description: s.description ?? null,
         exercises,
       };
     })
@@ -232,9 +244,10 @@ router.post("/plans", async (req, res): Promise<void> => {
         .values({
           planId: plan.id,
           type: setInput.type,
-          rounds: setInput.rounds,
+          rounds: setInput.type === "conditioning" ? 1 : setInput.rounds,
           restSeconds: setInput.restSeconds ?? null,
           orderIndex: setInput.orderIndex,
+          description: setInput.type === "conditioning" ? (setInput.description ?? null) : null,
         })
         .returning();
 
@@ -353,9 +366,10 @@ router.put("/plans/:id", async (req, res): Promise<void> => {
         .values({
           planId: params.data.id,
           type: setInput.type,
-          rounds: setInput.rounds,
+          rounds: setInput.type === "conditioning" ? 1 : setInput.rounds,
           restSeconds: setInput.restSeconds ?? null,
           orderIndex: setInput.orderIndex,
+          description: setInput.type === "conditioning" ? (setInput.description ?? null) : null,
         })
         .returning();
 

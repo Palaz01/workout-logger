@@ -59,10 +59,11 @@ export function useSessionMutations() {
     }: {
       sessionId: number;
       planSetId: number;
-      exerciseId: number;
+      exerciseId: number | null;
       roundNumber: number;
       weight: number | null;
       value: number | null;
+      setDescription?: string | null;
     }) => upsertSessionLog(sessionId, body),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({

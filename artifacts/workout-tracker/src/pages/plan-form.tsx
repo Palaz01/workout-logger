@@ -16,7 +16,7 @@ import { GripVertical, Plus, Trash2, Save, Layers, Globe, Check, ChevronDown, Us
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-const planSetTypeSchema = z.enum(["straight", "superset", "triset", "other"]);
+const planSetTypeSchema = z.enum(["straight", "superset", "triset", "other", "conditioning"]);
 const setExerciseSchema = z.object({
   exerciseId: z.coerce.number().min(1, "Required"),
   targetValue: z.string().min(1, "Required").regex(/^\d+(-\d+)?$/, "Use number or range (e.g. 10 or 8-12)"),
@@ -30,7 +30,24 @@ const planSetSchema = z.object({
     z.number().int().min(0).nullable()
   ).default(null),
   orderIndex: z.number().default(0),
-  exercises: z.array(setExerciseSchema).min(1, "Need at least 1 exercise"),
+  description: z.string().nullable().default(null),
+  exercises: z.array(setExerciseSchema).default([]),
+}).superRefine((set, ctx) => {
+  if (set.type === "conditioning") {
+    if (!set.description || !set.description.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["description"],
+        message: "Description is required",
+      });
+    }
+  } else if (set.exercises.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["exercises"],
+      message: "Need at least 1 exercise",
+    });
+  }
 });
 const planSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -106,6 +123,7 @@ export default function PlanFormPage() {
           rounds: s.rounds,
           restSeconds: s.restSeconds ?? null,
           orderIndex: s.orderIndex,
+          description: s.description ?? null,
           exercises: s.exercises.map(e => ({
             exerciseId: e.exerciseId,
             targetValue: String(e.targetValue),
@@ -114,7 +132,7 @@ export default function PlanFormPage() {
         }))
       });
     } else if (!isEdit && sets.length === 0) {
-      appendSet({ type: "straight", rounds: 3, restSeconds: null, orderIndex: 0, exercises: [{ exerciseId: 0, targetValue: "10", orderIndex: 0 }] });
+      appendSet({ type: "straight", rounds: 3, restSeconds: null, orderIndex: 0, description: null, exercises: [{ exerciseId: 0, targetValue: "10", orderIndex: 0 }] });
     }
   }, [isEdit, initialPlan, reset, appendSet]);
 
@@ -135,10 +153,13 @@ export default function PlanFormPage() {
       assignedUserIds: isGlobal ? [] : selectedUserIds,
       sets: data.sets.map((set, i) => ({
         type: set.type,
-        rounds: set.rounds,
+        rounds: set.type === "conditioning" ? 1 : set.rounds,
         restSeconds: set.restSeconds ?? null,
         orderIndex: i,
-        exercises: set.exercises.map((ex, j) => ({ exerciseId: ex.exerciseId, targetValue: ex.targetValue, orderIndex: j }))
+        description: set.type === "conditioning" ? (set.description?.trim() || null) : null,
+        exercises: set.type === "conditioning"
+          ? []
+          : set.exercises.map((ex, j) => ({ exerciseId: ex.exerciseId, targetValue: ex.targetValue, orderIndex: j }))
       }))
     };
 
@@ -311,17 +332,24 @@ export default function PlanFormPage() {
                                       { value: 'straight', label: 'Straight' },
                                       { value: 'superset', label: 'Superset' },
                                       { value: 'triset', label: 'Triset' },
-                                      { value: 'other', label: 'Other' }
+                                      { value: 'other', label: 'Other' },
+                                      { value: 'conditioning', label: 'Conditioning' }
                                     ]}
                                     {...field}
                                     onChange={(e) => {
                                       field.onChange(e);
                                       const type = e.target.value;
+                                      if (type === 'conditioning') {
+                                        setValue(`sets.${index}.exercises`, []);
+                                        setValue(`sets.${index}.rounds`, 1);
+                                        return;
+                                      }
                                       const currentExs = watch(`sets.${index}.exercises`);
                                       let targetCount = currentExs.length;
                                       if (type === 'straight') targetCount = 1;
                                       if (type === 'superset') targetCount = 2;
                                       if (type === 'triset') targetCount = 3;
+                                      if (targetCount === 0 && type === 'other') targetCount = 1;
                                       
                                       if (targetCount > currentExs.length) {
                                         const additions = Array.from({ length: targetCount - currentExs.length }).map(() => ({ exerciseId: 0, targetValue: "10", orderIndex: 0 }));
@@ -333,12 +361,14 @@ export default function PlanFormPage() {
                                   />
                                 )}
                               />
-                              <Input 
-                                type="number" 
-                                label="Rounds" 
-                                min={1}
-                                {...register(`sets.${index}.rounds`)}
-                              />
+                              {watch(`sets.${index}.type`) !== 'conditioning' && (
+                                <Input 
+                                  type="number" 
+                                  label="Rounds" 
+                                  min={1}
+                                  {...register(`sets.${index}.rounds`)}
+                                />
+                              )}
                               <div className="relative">
                                 <Input 
                                   type="number" 
@@ -354,18 +384,41 @@ export default function PlanFormPage() {
                               </div>
                             </div>
 
-                            <div className="space-y-3 pt-2">
-                              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Exercises</label>
-                              
-                              <SetExercises 
-                                control={control} 
-                                setIndex={index} 
-                                exerciseOptions={exerciseOptions}
-                                register={register}
-                                watch={watch}
-                                exercisesData={exercises}
-                              />
-                            </div>
+                            {watch(`sets.${index}.type`) === 'conditioning' ? (
+                              <div className="space-y-2 pt-2">
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Description</label>
+                                <Controller
+                                  control={control}
+                                  name={`sets.${index}.description`}
+                                  render={({ field, fieldState }) => (
+                                    <div>
+                                      <textarea
+                                        value={field.value ?? ""}
+                                        onChange={(e) => field.onChange(e.target.value)}
+                                        placeholder="e.g. 20 min Zone 2 cardio, or AMRAP 10 min: 5 burpees + 10 squats"
+                                        className="w-full min-h-24 px-4 py-3 rounded-xl border-2 border-border bg-muted/30 text-sm font-medium focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-y"
+                                      />
+                                      {fieldState.error && (
+                                        <p className="text-xs text-destructive font-medium mt-1">{fieldState.error.message}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                />
+                              </div>
+                            ) : (
+                              <div className="space-y-3 pt-2">
+                                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Exercises</label>
+                                
+                                <SetExercises 
+                                  control={control} 
+                                  setIndex={index} 
+                                  exerciseOptions={exerciseOptions}
+                                  register={register}
+                                  watch={watch}
+                                  exercisesData={exercises}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

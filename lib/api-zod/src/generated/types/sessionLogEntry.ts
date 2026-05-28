@@ -11,10 +11,11 @@ export interface SessionLogEntry {
   id: number;
   sessionId: number;
   planSetId: number;
-  exerciseId: number;
-  exerciseName: string;
-  exerciseMeasurementType: SessionLogEntryExerciseMeasurementType;
+  exerciseId?: number | null;
+  exerciseName?: string | null;
+  exerciseMeasurementType?: SessionLogEntryExerciseMeasurementType;
   roundNumber: number;
   weight?: number | null;
   value?: number | null;
+  setDescription?: string | null;
 }

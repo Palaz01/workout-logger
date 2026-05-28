@@ -30,6 +30,7 @@ export const planSetsTable = pgTable("plan_sets", {
   rounds: integer("rounds").notNull().default(1),
   restSeconds: integer("rest_seconds"),
   orderIndex: integer("order_index").notNull(),
+  description: text("description"),
 });
 
 export const setExercisesTable = pgTable("set_exercises", {

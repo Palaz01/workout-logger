@@ -19,12 +19,13 @@ import {
   Timer,
   AlertTriangle,
   MessageSquare,
+  Activity,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { PlanDetail, SessionLogEntry } from "@workspace/api-client-react";
 
 interface Step {
-  type: "exercise" | "set-summary" | "set-note";
+  type: "exercise" | "set-summary" | "set-note" | "conditioning";
   setIndex: number;
   setId: number;
   setType: string;
@@ -38,6 +39,7 @@ interface Step {
   totalSets: number;
   restSeconds: number | null;
   exerciseNames: string[];
+  description?: string | null;
 }
 
 function buildSteps(plan: PlanDetail): Step[] {
@@ -49,6 +51,27 @@ function buildSteps(plan: PlanDetail): Step[] {
       (a, b) => a.orderIndex - b.orderIndex
     );
     const exerciseNames = sortedExercises.map((e) => e.exerciseName);
+
+    if (set.type === "conditioning") {
+      steps.push({
+        type: "conditioning",
+        setIndex: setIndex + 1,
+        setId: set.id,
+        setType: set.type,
+        exerciseIndex: 0,
+        exerciseId: 0,
+        exerciseName: "",
+        measurementType: "",
+        targetValue: "",
+        roundNumber: 1,
+        totalRounds: 1,
+        totalSets: sortedSets.length,
+        restSeconds: set.restSeconds ?? null,
+        exerciseNames: [],
+        description: set.description ?? null,
+      });
+      return;
+    }
 
     steps.push({
       type: "set-summary",
@@ -170,6 +193,7 @@ export default function SessionPage() {
     Record<string, { weight: string; value: string }>
   >({});
   const [setNoteValues, setSetNoteValues] = useState<Record<number, string>>({});
+  const [conditioningDone, setConditioningDone] = useState<Record<number, boolean>>({});
   const [showLastStats, setShowLastStats] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -184,9 +208,13 @@ export default function SessionPage() {
 
   const stepKey = useCallback(
     (step: Step) =>
-      `${step.setId}-${step.exerciseId}-${step.roundNumber}`,
+      step.type === "conditioning"
+        ? `${step.setId}-null-1`
+        : `${step.setId}-${step.exerciseId}-${step.roundNumber}`,
     []
   );
+
+  const conditioningDoneKey = (setId: number) => `${setId}-null-1`;
 
   useEffect(() => {
     if (!plan || activeLoading || initialized || isCompleted) return;
@@ -199,13 +227,19 @@ export default function SessionPage() {
       setStartTime(new Date(existing.startedAt));
 
       const restoredValues: Record<string, { weight: string; value: string }> = {};
+      const restoredConditioning: Record<number, boolean> = {};
       for (const log of existing.logs) {
+        if (log.exerciseId == null) {
+          restoredConditioning[log.planSetId] = true;
+          continue;
+        }
         const k = `${log.planSetId}-${log.exerciseId}-${log.roundNumber}`;
         restoredValues[k] = {
           weight: log.weight != null ? String(log.weight) : "",
           value: log.value != null ? String(log.value) : "",
         };
       }
+      setConditioningDone(restoredConditioning);
 
       if (persisted && persisted.sessionId === existing.id) {
         const merged = { ...restoredValues, ...persisted.logValues };
@@ -717,6 +751,200 @@ export default function SessionPage() {
             </Button>
           </div>
         </main>
+      </div>
+    );
+  }
+
+  if (currentStep.type === "conditioning") {
+    const done = !!conditioningDone[currentStep.setId];
+    const handleMarkDone = () => {
+      if (!sessionId) return;
+      logEntry.mutate(
+        {
+          sessionId,
+          planSetId: currentStep.setId,
+          exerciseId: null,
+          roundNumber: 1,
+          weight: null,
+          value: null,
+          setDescription: currentStep.description ?? null,
+        },
+        {
+          onSuccess: () => {
+            setConditioningDone((prev) => ({ ...prev, [currentStep.setId]: true }));
+          },
+          onError: () => {
+            toast({ title: "Failed to mark completed", variant: "destructive" });
+          },
+        }
+      );
+    };
+    return (
+      <div className="fixed inset-0 bg-background flex flex-col max-w-md mx-auto" style={{ zIndex: 1 }}>
+        <header className="flex-shrink-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50 px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={handleCancel}
+              className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h1 className="text-sm font-bold truncate max-w-[60%]">{plan.name}</h1>
+            <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+              Set {currentStep.setIndex}/{currentStep.totalSets}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-primary rounded-full"
+              initial={false}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </header>
+
+        <main className="flex-1 flex flex-col p-6 overflow-y-auto" style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight : undefined }}>
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
+              <Activity className="w-8 h-8 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">
+              Set {currentStep.setIndex} of {currentStep.totalSets}
+            </h2>
+            <span className="inline-block bg-primary/10 text-primary text-sm font-semibold px-3 py-1 rounded-lg capitalize mb-6">
+              Conditioning
+            </span>
+
+            <div className="bg-card rounded-2xl p-5 card-shadow w-full text-left mb-4">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+                Description
+              </p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                {currentStep.description || (
+                  <span className="text-muted-foreground italic">No description</span>
+                )}
+              </p>
+            </div>
+
+            {currentStep.restSeconds != null && (
+              <div className="bg-card rounded-2xl p-4 card-shadow text-center w-full mb-4">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Timer className="w-4 h-4 text-primary" />
+                  <p className="text-2xl font-bold text-primary">{currentStep.restSeconds}</p>
+                </div>
+                <p className="text-xs text-muted-foreground font-medium">Rest (sec)</p>
+              </div>
+            )}
+
+            <Button
+              className="w-full"
+              variant={done ? "outline" : "default"}
+              onClick={handleMarkDone}
+              isLoading={logEntry.isPending}
+              disabled={done}
+            >
+              {done ? (
+                <>
+                  <Check className="w-5 h-5 mr-1" />
+                  Completed
+                </>
+              ) : (
+                "Mark Completed"
+              )}
+            </Button>
+          </div>
+        </main>
+
+        <div className="sticky bottom-0 bg-background/95 backdrop-blur-md border-t border-border/50 px-4 py-4 pb-safe">
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={goPrev}
+              disabled={currentStepIndex === 0}
+            >
+              <ChevronLeft className="w-5 h-5 mr-1" />
+              Back
+            </Button>
+            <Button className="flex-1" onClick={goNext}>
+              {currentStepIndex === steps.length - 1 ? (
+                <>
+                  <Check className="w-5 h-5 mr-1" />
+                  Finish
+                </>
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="w-5 h-5 ml-1" />
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <Modal
+          isOpen={showCancelConfirm}
+          onClose={() => setShowCancelConfirm(false)}
+          title="Cancel Workout?"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+              </div>
+              <p className="text-sm text-muted-foreground pt-2">
+                Your logged data for this session will be lost. This cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                Keep Going
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={confirmCancel}
+                isLoading={cancel.isPending}
+              >
+                Cancel Workout
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={showFinishConfirm}
+          onClose={() => setShowFinishConfirm(false)}
+          title="Finish Workout?"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to finish this workout? Make sure you've logged all your sets.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowFinishConfirm(false)}
+              >
+                Continue
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleFinish}
+                isLoading={complete.isPending}
+              >
+                <Check className="w-4 h-4 mr-1" />
+                Finish
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     );
   }

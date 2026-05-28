@@ -7,7 +7,8 @@
  */
 
 export type SessionLogEntryExerciseMeasurementType =
-  (typeof SessionLogEntryExerciseMeasurementType)[keyof typeof SessionLogEntryExerciseMeasurementType];
+  | (typeof SessionLogEntryExerciseMeasurementType)[keyof typeof SessionLogEntryExerciseMeasurementType]
+  | null;
 
 export const SessionLogEntryExerciseMeasurementType = {
   reps: "reps",

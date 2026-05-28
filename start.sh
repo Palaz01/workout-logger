@@ -30,6 +30,8 @@ async function run() {
     await client.query('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS snapshot_plan_name TEXT');
     await client.query('ALTER TABLE session_logs ADD COLUMN IF NOT EXISTS snapshot_exercise_name TEXT');
     await client.query('ALTER TABLE session_logs ADD COLUMN IF NOT EXISTS snapshot_measurement_type TEXT');
+    await client.query('ALTER TABLE session_logs ADD COLUMN IF NOT EXISTS snapshot_set_description TEXT');
+    await client.query('ALTER TABLE plan_sets ADD COLUMN IF NOT EXISTS description TEXT');
     await client.query('ALTER TABLE sessions ALTER COLUMN plan_id DROP NOT NULL');
     await client.query('ALTER TABLE session_logs ALTER COLUMN plan_set_id DROP NOT NULL');
     await client.query('ALTER TABLE session_logs ALTER COLUMN exercise_id DROP NOT NULL');

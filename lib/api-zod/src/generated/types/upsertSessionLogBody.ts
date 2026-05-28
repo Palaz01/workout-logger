@@ -8,8 +8,9 @@
 
 export interface UpsertSessionLogBody {
   planSetId: number;
-  exerciseId: number;
+  exerciseId?: number | null;
   roundNumber: number;
   weight?: number | null;
   value?: number | null;
+  setDescription?: string | null;
 }

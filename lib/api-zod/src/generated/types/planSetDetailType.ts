@@ -14,4 +14,5 @@ export const PlanSetDetailType = {
   superset: "superset",
   triset: "triset",
   other: "other",
+  conditioning: "conditioning",
 } as const;

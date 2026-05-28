@@ -283,10 +283,17 @@ export const CreatePlanBody = zod.object({
   createdBy: zod.number().optional(),
   sets: zod.array(
     zod.object({
-      type: zod.enum(["straight", "superset", "triset", "other"]),
+      type: zod.enum([
+        "straight",
+        "superset",
+        "triset",
+        "other",
+        "conditioning",
+      ]),
       rounds: zod.number(),
       restSeconds: zod.number().nullish(),
       orderIndex: zod.number(),
+      description: zod.string().nullish(),
       exercises: zod.array(
         zod.object({
           exerciseId: zod.number(),
@@ -316,10 +323,17 @@ export const GetPlanResponse = zod.object({
   sets: zod.array(
     zod.object({
       id: zod.number(),
-      type: zod.enum(["straight", "superset", "triset", "other"]),
+      type: zod.enum([
+        "straight",
+        "superset",
+        "triset",
+        "other",
+        "conditioning",
+      ]),
       rounds: zod.number(),
       restSeconds: zod.number().nullish(),
       orderIndex: zod.number(),
+      description: zod.string().nullish(),
       exercises: zod.array(
         zod.object({
           id: zod.number(),
@@ -347,10 +361,17 @@ export const UpdatePlanBody = zod.object({
   assignedUserIds: zod.array(zod.number()).optional(),
   sets: zod.array(
     zod.object({
-      type: zod.enum(["straight", "superset", "triset", "other"]),
+      type: zod.enum([
+        "straight",
+        "superset",
+        "triset",
+        "other",
+        "conditioning",
+      ]),
       rounds: zod.number(),
       restSeconds: zod.number().nullish(),
       orderIndex: zod.number(),
+      description: zod.string().nullish(),
       exercises: zod.array(
         zod.object({
           exerciseId: zod.number(),
@@ -373,10 +394,17 @@ export const UpdatePlanResponse = zod.object({
   sets: zod.array(
     zod.object({
       id: zod.number(),
-      type: zod.enum(["straight", "superset", "triset", "other"]),
+      type: zod.enum([
+        "straight",
+        "superset",
+        "triset",
+        "other",
+        "conditioning",
+      ]),
       rounds: zod.number(),
       restSeconds: zod.number().nullish(),
       orderIndex: zod.number(),
+      description: zod.string().nullish(),
       exercises: zod.array(
         zod.object({
           id: zod.number(),
@@ -451,12 +479,15 @@ export const GetSessionResponse = zod.object({
       id: zod.number(),
       sessionId: zod.number(),
       planSetId: zod.number(),
-      exerciseId: zod.number(),
-      exerciseName: zod.string(),
-      exerciseMeasurementType: zod.enum(["reps", "seconds", "meters"]),
+      exerciseId: zod.number().nullish(),
+      exerciseName: zod.string().nullish(),
+      exerciseMeasurementType: zod
+        .enum(["reps", "seconds", "meters"])
+        .nullish(),
       roundNumber: zod.number(),
       weight: zod.number().nullish(),
       value: zod.number().nullish(),
+      setDescription: zod.string().nullish(),
     }),
   ),
   setNotes: zod.array(
@@ -492,12 +523,15 @@ export const UpdateSessionStatusResponse = zod.object({
       id: zod.number(),
       sessionId: zod.number(),
       planSetId: zod.number(),
-      exerciseId: zod.number(),
-      exerciseName: zod.string(),
-      exerciseMeasurementType: zod.enum(["reps", "seconds", "meters"]),
+      exerciseId: zod.number().nullish(),
+      exerciseName: zod.string().nullish(),
+      exerciseMeasurementType: zod
+        .enum(["reps", "seconds", "meters"])
+        .nullish(),
       roundNumber: zod.number(),
       weight: zod.number().nullish(),
       value: zod.number().nullish(),
+      setDescription: zod.string().nullish(),
     }),
   ),
   deleted: zod
@@ -524,22 +558,24 @@ export const UpsertSessionLogParams = zod.object({
 
 export const UpsertSessionLogBody = zod.object({
   planSetId: zod.number(),
-  exerciseId: zod.number(),
+  exerciseId: zod.number().nullish(),
   roundNumber: zod.number(),
   weight: zod.number().nullish(),
   value: zod.number().nullish(),
+  setDescription: zod.string().nullish(),
 });
 
 export const UpsertSessionLogResponse = zod.object({
   id: zod.number(),
   sessionId: zod.number(),
   planSetId: zod.number(),
-  exerciseId: zod.number(),
-  exerciseName: zod.string(),
-  exerciseMeasurementType: zod.enum(["reps", "seconds", "meters"]),
+  exerciseId: zod.number().nullish(),
+  exerciseName: zod.string().nullish(),
+  exerciseMeasurementType: zod.enum(["reps", "seconds", "meters"]).nullish(),
   roundNumber: zod.number(),
   weight: zod.number().nullish(),
   value: zod.number().nullish(),
+  setDescription: zod.string().nullish(),
 });
 
 /**
@@ -584,12 +620,15 @@ export const GetActiveSessionResponse = zod.object({
           id: zod.number(),
           sessionId: zod.number(),
           planSetId: zod.number(),
-          exerciseId: zod.number(),
-          exerciseName: zod.string(),
-          exerciseMeasurementType: zod.enum(["reps", "seconds", "meters"]),
+          exerciseId: zod.number().nullish(),
+          exerciseName: zod.string().nullish(),
+          exerciseMeasurementType: zod
+            .enum(["reps", "seconds", "meters"])
+            .nullish(),
           roundNumber: zod.number(),
           weight: zod.number().nullish(),
           value: zod.number().nullish(),
+          setDescription: zod.string().nullish(),
         }),
       ),
       setNotes: zod.array(
@@ -628,12 +667,15 @@ export const GetLastSessionResponse = zod.object({
           id: zod.number(),
           sessionId: zod.number(),
           planSetId: zod.number(),
-          exerciseId: zod.number(),
-          exerciseName: zod.string(),
-          exerciseMeasurementType: zod.enum(["reps", "seconds", "meters"]),
+          exerciseId: zod.number().nullish(),
+          exerciseName: zod.string().nullish(),
+          exerciseMeasurementType: zod
+            .enum(["reps", "seconds", "meters"])
+            .nullish(),
           roundNumber: zod.number(),
           weight: zod.number().nullish(),
           value: zod.number().nullish(),
+          setDescription: zod.string().nullish(),
         }),
       ),
       setNotes: zod.array(

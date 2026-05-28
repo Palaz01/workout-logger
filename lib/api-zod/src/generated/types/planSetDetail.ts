@@ -14,5 +14,6 @@ export interface PlanSetDetail {
   rounds: number;
   restSeconds?: number | null;
   orderIndex: number;
+  description?: string | null;
   exercises: SetExerciseDetail[];
 }

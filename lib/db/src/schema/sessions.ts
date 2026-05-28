@@ -27,6 +27,7 @@ export const sessionLogsTable = pgTable("session_logs", {
   value: real("value"),
   snapshotExerciseName: text("snapshot_exercise_name"),
   snapshotMeasurementType: text("snapshot_measurement_type"),
+  snapshotSetDescription: text("snapshot_set_description"),
 }, (table) => [
   uniqueIndex("session_log_unique_idx").on(table.sessionId, table.planSetId, table.exerciseId, table.roundNumber),
 ]);

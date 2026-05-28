@@ -3,7 +3,7 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/Button";
 import { usePlan } from "@/hooks/use-plans";
 import { useUserContext } from "@/contexts/UserContext";
-import { Play, Edit2, Dumbbell, Timer, Repeat } from "lucide-react";
+import { Play, Edit2, Dumbbell, Timer, Repeat, Activity } from "lucide-react";
 
 function getMeasurementLabel(type: string): string {
   switch (type) {
@@ -61,6 +61,7 @@ export default function PlanDetailPage() {
       <div className="p-4 space-y-4 pb-32">
         {sortedSets.map((set, i) => {
           const sortedExercises = [...set.exercises].sort((a, b) => a.orderIndex - b.orderIndex);
+          const isConditioning = set.type === "conditioning";
           return (
             <div key={set.id} className="bg-card rounded-2xl card-shadow overflow-hidden">
               <div className="bg-muted/50 px-4 py-3 flex items-center justify-between border-b border-border/60">
@@ -73,10 +74,12 @@ export default function PlanDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-xs font-semibold text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Repeat className="w-3.5 h-3.5" />
-                    {set.rounds} {set.rounds === 1 ? "round" : "rounds"}
-                  </span>
+                  {!isConditioning && (
+                    <span className="flex items-center gap-1">
+                      <Repeat className="w-3.5 h-3.5" />
+                      {set.rounds} {set.rounds === 1 ? "round" : "rounds"}
+                    </span>
+                  )}
                   {set.restSeconds != null && (
                     <span className="flex items-center gap-1">
                       <Timer className="w-3.5 h-3.5" />
@@ -86,19 +89,30 @@ export default function PlanDetailPage() {
                 </div>
               </div>
               <div className="p-4 space-y-2">
-                {sortedExercises.map((ex) => (
-                  <div key={ex.id} className="flex items-center gap-3 py-2">
+                {isConditioning ? (
+                  <div className="flex items-start gap-3 py-2">
                     <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Dumbbell className="w-4 h-4 text-primary" />
+                      <Activity className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{ex.exerciseName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Target: {ex.targetValue} {getMeasurementLabel(ex.exerciseMeasurementType)}
-                      </p>
-                    </div>
+                    <p className="flex-1 text-sm whitespace-pre-wrap leading-relaxed">
+                      {set.description || <span className="text-muted-foreground italic">No description</span>}
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  sortedExercises.map((ex) => (
+                    <div key={ex.id} className="flex items-center gap-3 py-2">
+                      <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Dumbbell className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{ex.exerciseName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Target: {ex.targetValue} {getMeasurementLabel(ex.exerciseMeasurementType)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           );

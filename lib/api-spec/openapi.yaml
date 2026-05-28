@@ -1010,7 +1010,7 @@ components:
       properties:
         type:
           type: string
-          enum: [straight, superset, triset, other]
+          enum: [straight, superset, triset, other, conditioning]
         rounds:
           type: integer
         restSeconds:
@@ -1018,6 +1018,9 @@ components:
           nullable: true
         orderIndex:
           type: integer
+        description:
+          type: string
+          nullable: true
         exercises:
           type: array
           items:
@@ -1099,7 +1102,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [straight, superset, triset, other]
+          enum: [straight, superset, triset, other, conditioning]
         rounds:
           type: integer
         restSeconds:
@@ -1107,6 +1110,9 @@ components:
           nullable: true
         orderIndex:
           type: integer
+        description:
+          type: string
+          nullable: true
         exercises:
           type: array
           items:
@@ -1185,6 +1191,7 @@ components:
           type: integer
         exerciseId:
           type: integer
+          nullable: true
         roundNumber:
           type: integer
         weight:
@@ -1193,9 +1200,11 @@ components:
         value:
           type: number
           nullable: true
+        setDescription:
+          type: string
+          nullable: true
       required:
         - planSetId
-        - exerciseId
         - roundNumber
 
     SessionSummary:
@@ -1241,11 +1250,14 @@ components:
           type: integer
         exerciseId:
           type: integer
+          nullable: true
         exerciseName:
           type: string
+          nullable: true
         exerciseMeasurementType:
           type: string
           enum: [reps, seconds, meters]
+          nullable: true
         roundNumber:
           type: integer
         weight:
@@ -1254,13 +1266,13 @@ components:
         value:
           type: number
           nullable: true
+        setDescription:
+          type: string
+          nullable: true
       required:
         - id
         - sessionId
         - planSetId
-        - exerciseId
-        - exerciseName
-        - exerciseMeasurementType
         - roundNumber
 
     SessionDetail:

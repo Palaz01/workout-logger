@@ -63,31 +63,49 @@ async function getSessionDetail(sessionId: number) {
       liveExerciseMeasurementType: exercisesTable.measurementType,
       snapshotExerciseName: sessionLogsTable.snapshotExerciseName,
       snapshotMeasurementType: sessionLogsTable.snapshotMeasurementType,
+      snapshotSetDescription: sessionLogsTable.snapshotSetDescription,
+      liveSetDescription: planSetsTable.description,
+      liveSetType: planSetsTable.type,
       roundNumber: sessionLogsTable.roundNumber,
       weight: sessionLogsTable.weight,
       value: sessionLogsTable.value,
     })
     .from(sessionLogsTable)
     .leftJoin(exercisesTable, eq(sessionLogsTable.exerciseId, exercisesTable.id))
+    .leftJoin(planSetsTable, eq(sessionLogsTable.planSetId, planSetsTable.id))
     .where(eq(sessionLogsTable.sessionId, sessionId));
 
   const isCompleted = session.status !== "active";
 
-  const logs = rawLogs.map((log) => ({
-    id: log.id,
-    sessionId: log.sessionId,
-    planSetId: log.planSetId ?? 0,
-    exerciseId: log.exerciseId ?? 0,
-    exerciseName: isCompleted
-      ? (log.snapshotExerciseName ?? log.liveExerciseName ?? "Deleted Exercise")
-      : (log.liveExerciseName ?? log.snapshotExerciseName ?? "Deleted Exercise"),
-    exerciseMeasurementType: isCompleted
-      ? (log.snapshotMeasurementType ?? log.liveExerciseMeasurementType ?? "reps")
-      : (log.liveExerciseMeasurementType ?? log.snapshotMeasurementType ?? "reps"),
-    roundNumber: log.roundNumber,
-    weight: log.weight,
-    value: log.value,
-  }));
+  const logs = rawLogs.map((log) => {
+    const isConditioning =
+      log.exerciseId == null ||
+      log.liveSetType === "conditioning" ||
+      log.snapshotSetDescription != null;
+    const setDescription = isCompleted
+      ? (log.snapshotSetDescription ?? log.liveSetDescription ?? null)
+      : (log.liveSetDescription ?? log.snapshotSetDescription ?? null);
+    return {
+      id: log.id,
+      sessionId: log.sessionId,
+      planSetId: log.planSetId ?? 0,
+      exerciseId: log.exerciseId ?? null,
+      exerciseName: isConditioning
+        ? null
+        : (isCompleted
+            ? (log.snapshotExerciseName ?? log.liveExerciseName ?? "Deleted Exercise")
+            : (log.liveExerciseName ?? log.snapshotExerciseName ?? "Deleted Exercise")),
+      exerciseMeasurementType: isConditioning
+        ? null
+        : (isCompleted
+            ? (log.snapshotMeasurementType ?? log.liveExerciseMeasurementType ?? "reps")
+            : (log.liveExerciseMeasurementType ?? log.snapshotMeasurementType ?? "reps")),
+      roundNumber: log.roundNumber,
+      weight: log.weight,
+      value: log.value,
+      setDescription,
+    };
+  });
 
   const setNotes = await db
     .select({
@@ -335,19 +353,25 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
   const logsToSnapshot = await db
     .select({
       logId: sessionLogsTable.id,
+      exerciseId: sessionLogsTable.exerciseId,
       exerciseName: exercisesTable.name,
       measurementType: exercisesTable.measurementType,
+      setDescription: planSetsTable.description,
+      setType: planSetsTable.type,
     })
     .from(sessionLogsTable)
-    .innerJoin(exercisesTable, eq(sessionLogsTable.exerciseId, exercisesTable.id))
+    .leftJoin(exercisesTable, eq(sessionLogsTable.exerciseId, exercisesTable.id))
+    .leftJoin(planSetsTable, eq(sessionLogsTable.planSetId, planSetsTable.id))
     .where(eq(sessionLogsTable.sessionId, params.data.id));
 
   for (const logRow of logsToSnapshot) {
+    const isConditioning = logRow.setType === "conditioning" || logRow.exerciseId == null;
     await db
       .update(sessionLogsTable)
       .set({
-        snapshotExerciseName: logRow.exerciseName,
-        snapshotMeasurementType: logRow.measurementType,
+        snapshotExerciseName: isConditioning ? null : (logRow.exerciseName ?? null),
+        snapshotMeasurementType: isConditioning ? null : (logRow.measurementType ?? null),
+        snapshotSetDescription: isConditioning ? (logRow.setDescription ?? null) : null,
       })
       .where(eq(sessionLogsTable.id, logRow.logId));
   }
@@ -434,19 +458,32 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
     return;
   }
 
-  const [setExercise] = await db
-    .select()
-    .from(setExercisesTable)
-    .where(
-      and(
-        eq(setExercisesTable.setId, parsed.data.planSetId),
-        eq(setExercisesTable.exerciseId, parsed.data.exerciseId)
-      )
-    );
+  const isConditioning = planSet.type === "conditioning";
 
-  if (!setExercise) {
-    res.status(400).json({ error: "Exercise does not belong to this set" });
-    return;
+  if (isConditioning) {
+    if (parsed.data.exerciseId != null) {
+      res.status(400).json({ error: "Conditioning sets must not include an exerciseId" });
+      return;
+    }
+  } else {
+    if (parsed.data.exerciseId == null) {
+      res.status(400).json({ error: "exerciseId is required for this set type" });
+      return;
+    }
+    const [setExercise] = await db
+      .select()
+      .from(setExercisesTable)
+      .where(
+        and(
+          eq(setExercisesTable.setId, parsed.data.planSetId),
+          eq(setExercisesTable.exerciseId, parsed.data.exerciseId)
+        )
+      );
+
+    if (!setExercise) {
+      res.status(400).json({ error: "Exercise does not belong to this set" });
+      return;
+    }
   }
 
   if (parsed.data.roundNumber < 1 || parsed.data.roundNumber > planSet.rounds) {
@@ -454,27 +491,37 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
     return;
   }
 
+  const existingConditions = [
+    eq(sessionLogsTable.sessionId, params.data.id),
+    eq(sessionLogsTable.planSetId, parsed.data.planSetId),
+    eq(sessionLogsTable.roundNumber, parsed.data.roundNumber),
+  ];
+  if (parsed.data.exerciseId != null) {
+    existingConditions.push(eq(sessionLogsTable.exerciseId, parsed.data.exerciseId));
+  } else {
+    existingConditions.push(sql`${sessionLogsTable.exerciseId} IS NULL`);
+  }
   const [existing] = await db
     .select()
     .from(sessionLogsTable)
-    .where(
-      and(
-        eq(sessionLogsTable.sessionId, params.data.id),
-        eq(sessionLogsTable.planSetId, parsed.data.planSetId),
-        eq(sessionLogsTable.exerciseId, parsed.data.exerciseId),
-        eq(sessionLogsTable.roundNumber, parsed.data.roundNumber)
-      )
-    );
+    .where(and(...existingConditions));
 
-  const [exercise] = await db
-    .select()
-    .from(exercisesTable)
-    .where(eq(exercisesTable.id, parsed.data.exerciseId));
-
-  if (!exercise) {
-    res.status(404).json({ error: "Exercise not found" });
-    return;
+  let exerciseRow: { name: string; measurementType: string } | null = null;
+  if (!isConditioning && parsed.data.exerciseId != null) {
+    const [exercise] = await db
+      .select()
+      .from(exercisesTable)
+      .where(eq(exercisesTable.id, parsed.data.exerciseId));
+    if (!exercise) {
+      res.status(404).json({ error: "Exercise not found" });
+      return;
+    }
+    exerciseRow = { name: exercise.name, measurementType: exercise.measurementType };
   }
+
+  const snapshotDescription = isConditioning
+    ? (parsed.data.setDescription ?? planSet.description ?? null)
+    : null;
 
   let log;
   if (existing) {
@@ -483,8 +530,9 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
       .set({
         weight: parsed.data.weight ?? null,
         value: parsed.data.value ?? null,
-        snapshotExerciseName: exercise.name,
-        snapshotMeasurementType: exercise.measurementType,
+        snapshotExerciseName: exerciseRow?.name ?? null,
+        snapshotMeasurementType: exerciseRow?.measurementType ?? null,
+        snapshotSetDescription: snapshotDescription,
       })
       .where(eq(sessionLogsTable.id, existing.id))
       .returning();
@@ -494,12 +542,13 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
       .values({
         sessionId: params.data.id,
         planSetId: parsed.data.planSetId,
-        exerciseId: parsed.data.exerciseId,
+        exerciseId: parsed.data.exerciseId ?? null,
         roundNumber: parsed.data.roundNumber,
         weight: parsed.data.weight ?? null,
         value: parsed.data.value ?? null,
-        snapshotExerciseName: exercise.name,
-        snapshotMeasurementType: exercise.measurementType,
+        snapshotExerciseName: exerciseRow?.name ?? null,
+        snapshotMeasurementType: exerciseRow?.measurementType ?? null,
+        snapshotSetDescription: snapshotDescription,
       })
       .returning();
   }
@@ -509,12 +558,13 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
       id: log.id,
       sessionId: log.sessionId,
       planSetId: log.planSetId,
-      exerciseId: log.exerciseId,
-      exerciseName: exercise.name,
-      exerciseMeasurementType: exercise.measurementType,
+      exerciseId: log.exerciseId ?? null,
+      exerciseName: exerciseRow?.name ?? null,
+      exerciseMeasurementType: exerciseRow?.measurementType ?? null,
       roundNumber: log.roundNumber,
       weight: log.weight,
       value: log.value,
+      setDescription: snapshotDescription,
     })
   );
 });
