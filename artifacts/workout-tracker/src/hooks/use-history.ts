@@ -16,6 +16,19 @@ export function useSessionHistory() {
   });
 }
 
+export function useScheduledSessions() {
+  const { activeUser } = useUserContext();
+  const params = activeUser
+    ? { userId: activeUser.id, status: "scheduled" as const }
+    : { status: "scheduled" as const };
+  return useListSessions(params, {
+    query: {
+      queryKey: getListSessionsQueryKey(params),
+      enabled: !!activeUser,
+    },
+  });
+}
+
 export function useSessionDetail(id: number) {
   return useGetSession(id);
 }

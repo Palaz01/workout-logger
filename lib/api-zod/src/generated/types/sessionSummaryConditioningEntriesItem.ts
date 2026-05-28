@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface SessionSummaryConditioningEntriesItem {
+export type SessionSummaryConditioningEntriesItem = {
   planSetId?: number | null;
   description: string | null;
-}
+};

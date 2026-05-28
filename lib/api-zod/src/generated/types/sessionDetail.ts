@@ -15,8 +15,9 @@ export interface SessionDetail {
   planName: string;
   userId?: number | null;
   status: SessionDetailStatus;
-  startedAt: Date;
+  startedAt?: Date | null;
   completedAt?: Date | null;
+  scheduledFor?: Date | null;
   logs: SessionLogEntry[];
   setNotes: SetNoteEntry[];
 }

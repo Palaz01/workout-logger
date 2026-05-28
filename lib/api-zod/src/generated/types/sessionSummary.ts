@@ -5,8 +5,8 @@
  * Workout Tracker API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { SessionSummaryStatus } from "./sessionSummaryStatus";
 import type { SessionSummaryConditioningEntriesItem } from "./sessionSummaryConditioningEntriesItem";
+import type { SessionSummaryStatus } from "./sessionSummaryStatus";
 
 export interface SessionSummary {
   id: number;
@@ -14,8 +14,9 @@ export interface SessionSummary {
   planName: string;
   userId?: number | null;
   status: SessionSummaryStatus;
-  startedAt: Date;
+  startedAt?: Date | null;
   completedAt?: Date | null;
+  scheduledFor?: Date | null;
   logCount: number;
   conditioningEntries: SessionSummaryConditioningEntriesItem[];
 }

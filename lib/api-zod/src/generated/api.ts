@@ -427,13 +427,20 @@ export const DeletePlanParams = zod.object({
 });
 
 /**
- * @summary List completed workout sessions
+ * @summary List workout sessions (defaults to completed/cancelled history)
  */
+export const listSessionsQueryStatusDefault = `history`;
 export const listSessionsQueryLimitDefault = 50;
 export const listSessionsQueryOffsetDefault = 0;
 
 export const ListSessionsQueryParams = zod.object({
   userId: zod.coerce.number().optional().describe("Filter sessions by user"),
+  status: zod
+    .enum(["history", "scheduled"])
+    .default(listSessionsQueryStatusDefault)
+    .describe(
+      "history = completed\/cancelled (default), scheduled = upcoming scheduled",
+    ),
   limit: zod.coerce.number().default(listSessionsQueryLimitDefault),
   offset: zod.coerce.number().default(listSessionsQueryOffsetDefault),
 });
@@ -443,10 +450,17 @@ export const ListSessionsResponseItem = zod.object({
   planId: zod.number(),
   planName: zod.string(),
   userId: zod.number().nullish(),
-  status: zod.enum(["active", "completed", "cancelled"]),
-  startedAt: zod.date(),
+  status: zod.enum(["scheduled", "active", "completed", "cancelled"]),
+  startedAt: zod.date().nullish(),
   completedAt: zod.date().nullish(),
+  scheduledFor: zod.date().nullish(),
   logCount: zod.number(),
+  conditioningEntries: zod.array(
+    zod.object({
+      planSetId: zod.number().nullish(),
+      description: zod.string().nullable(),
+    }),
+  ),
 });
 export const ListSessionsResponse = zod.array(ListSessionsResponseItem);
 
@@ -457,6 +471,10 @@ export const StartSessionBody = zod.object({
   planId: zod.number(),
   userId: zod.number().optional(),
   startedAt: zod.date().optional(),
+  scheduledFor: zod
+    .date()
+    .optional()
+    .describe("When set, creates a scheduled session instead of an active one"),
 });
 
 /**
@@ -471,9 +489,10 @@ export const GetSessionResponse = zod.object({
   planId: zod.number(),
   planName: zod.string(),
   userId: zod.number().nullish(),
-  status: zod.enum(["active", "completed", "cancelled"]),
-  startedAt: zod.date(),
+  status: zod.enum(["scheduled", "active", "completed", "cancelled"]),
+  startedAt: zod.date().nullish(),
   completedAt: zod.date().nullish(),
+  scheduledFor: zod.date().nullish(),
   logs: zod.array(
     zod.object({
       id: zod.number(),
@@ -506,7 +525,7 @@ export const UpdateSessionStatusParams = zod.object({
 });
 
 export const UpdateSessionStatusBody = zod.object({
-  status: zod.enum(["completed", "cancelled"]),
+  status: zod.enum(["active", "completed", "cancelled"]),
   completedAt: zod.date().optional(),
 });
 
@@ -515,9 +534,10 @@ export const UpdateSessionStatusResponse = zod.object({
   planId: zod.number(),
   planName: zod.string(),
   userId: zod.number().nullish(),
-  status: zod.enum(["active", "completed", "cancelled"]),
-  startedAt: zod.date(),
+  status: zod.enum(["scheduled", "active", "completed", "cancelled"]),
+  startedAt: zod.date().nullish(),
   completedAt: zod.date().nullish(),
+  scheduledFor: zod.date().nullish(),
   logs: zod.array(
     zod.object({
       id: zod.number(),
@@ -612,9 +632,10 @@ export const GetActiveSessionResponse = zod.object({
       planId: zod.number(),
       planName: zod.string(),
       userId: zod.number().nullish(),
-      status: zod.enum(["active", "completed", "cancelled"]),
-      startedAt: zod.date(),
+      status: zod.enum(["scheduled", "active", "completed", "cancelled"]),
+      startedAt: zod.date().nullish(),
       completedAt: zod.date().nullish(),
+      scheduledFor: zod.date().nullish(),
       logs: zod.array(
         zod.object({
           id: zod.number(),
@@ -659,9 +680,10 @@ export const GetLastSessionResponse = zod.object({
       planId: zod.number(),
       planName: zod.string(),
       userId: zod.number().nullish(),
-      status: zod.enum(["active", "completed", "cancelled"]),
-      startedAt: zod.date(),
+      status: zod.enum(["scheduled", "active", "completed", "cancelled"]),
+      startedAt: zod.date().nullish(),
       completedAt: zod.date().nullish(),
+      scheduledFor: zod.date().nullish(),
       logs: zod.array(
         zod.object({
           id: zod.number(),

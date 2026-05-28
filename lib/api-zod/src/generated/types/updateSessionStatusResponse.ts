@@ -14,8 +14,9 @@ export interface UpdateSessionStatusResponse {
   planName: string;
   userId?: number | null;
   status: UpdateSessionStatusResponseStatus;
-  startedAt: Date;
+  startedAt?: Date | null;
   completedAt?: Date | null;
+  scheduledFor?: Date | null;
   logs: SessionLogEntry[];
   /** True when the session was auto-deleted (cancelled with zero logs) */
   deleted?: boolean;

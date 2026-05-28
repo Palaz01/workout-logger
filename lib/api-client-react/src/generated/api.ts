@@ -2067,7 +2067,7 @@ export const useDeletePlan = <
 };
 
 /**
- * @summary List completed workout sessions
+ * @summary List workout sessions (defaults to completed/cancelled history)
  */
 export const getListSessionsUrl = (params?: ListSessionsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -2134,7 +2134,7 @@ export type ListSessionsQueryResult = NonNullable<
 export type ListSessionsQueryError = ErrorType<unknown>;
 
 /**
- * @summary List completed workout sessions
+ * @summary List workout sessions (defaults to completed/cancelled history)
  */
 
 export function useListSessions<

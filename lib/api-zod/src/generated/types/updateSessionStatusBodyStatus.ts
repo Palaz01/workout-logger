@@ -10,6 +10,7 @@ export type UpdateSessionStatusBodyStatus =
   (typeof UpdateSessionStatusBodyStatus)[keyof typeof UpdateSessionStatusBodyStatus];
 
 export const UpdateSessionStatusBodyStatus = {
+  active: "active",
   completed: "completed",
   cancelled: "cancelled",
 } as const;

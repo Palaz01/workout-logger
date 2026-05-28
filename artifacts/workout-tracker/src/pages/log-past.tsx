@@ -100,7 +100,7 @@ export default function LogPastPage() {
   const updateValue = (key: string, field: "weight" | "value", val: string) => {
     setLogValues((prev) => ({
       ...prev,
-      [key]: { weight: "", value: "", ...prev[key], [field]: val },
+      [key]: { ...{ weight: "", value: "" }, ...prev[key], [field]: val },
     }));
   };
 

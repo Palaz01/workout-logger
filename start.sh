@@ -28,6 +28,9 @@ async function run() {
   const client = await pool.connect();
   try {
     await client.query('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS snapshot_plan_name TEXT');
+    await client.query('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMP WITH TIME ZONE');
+    await client.query('ALTER TABLE sessions ALTER COLUMN started_at DROP NOT NULL');
+    await client.query('ALTER TABLE sessions ALTER COLUMN started_at DROP DEFAULT');
     await client.query('ALTER TABLE session_logs ADD COLUMN IF NOT EXISTS snapshot_exercise_name TEXT');
     await client.query('ALTER TABLE session_logs ADD COLUMN IF NOT EXISTS snapshot_measurement_type TEXT');
     await client.query('ALTER TABLE session_logs ADD COLUMN IF NOT EXISTS snapshot_set_description TEXT');

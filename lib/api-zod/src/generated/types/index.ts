@@ -29,6 +29,7 @@ export * from "./invitationResponseRole";
 export * from "./lastSessionResponse";
 export * from "./listPlansParams";
 export * from "./listSessionsParams";
+export * from "./listSessionsStatus";
 export * from "./loginBody";
 export * from "./messageResponse";
 export * from "./organization";

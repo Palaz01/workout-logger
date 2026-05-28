@@ -1,13 +1,15 @@
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/Button";
 import { usePlans, usePlanMutations } from "@/hooks/use-plans";
+import { useSessionMutations } from "@/hooks/use-sessions";
 import { useUserContext } from "@/contexts/UserContext";
-import { Plus, Play, MoreVertical, Edit2, Trash2, Calendar, LayoutList, ClipboardList, ScrollText } from "lucide-react";
+import { Plus, Play, MoreVertical, Edit2, Trash2, Calendar, LayoutList, ClipboardList, ScrollText, CalendarClock } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Modal } from "@/components/Modal";
 
 export default function HomePage() {
   const { data: plans, isLoading } = usePlans();
@@ -15,8 +17,32 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isTrainer } = useUserContext();
-  
+  const { schedule } = useSessionMutations();
+
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+  const [scheduleTarget, setScheduleTarget] = useState<{ id: number; name: string } | null>(null);
+  const [scheduleDate, setScheduleDate] = useState<string>(() => format(new Date(), "yyyy-MM-dd"));
+
+  const handleSchedule = () => {
+    if (!scheduleTarget) return;
+    const date = new Date(`${scheduleDate}T09:00:00`);
+    if (isNaN(date.getTime())) {
+      toast({ title: "Invalid date", variant: "destructive" });
+      return;
+    }
+    schedule.mutate(
+      { planId: scheduleTarget.id, scheduledFor: date },
+      {
+        onSuccess: () => {
+          toast({ title: "Workout scheduled", description: format(date, "EEE, MMM d, yyyy") });
+          setScheduleTarget(null);
+        },
+        onError: () => {
+          toast({ title: "Failed to schedule", variant: "destructive" });
+        },
+      }
+    );
+  };
 
   const handleDelete = async (id: number) => {
     if (confirm("Delete this plan?")) {
@@ -121,6 +147,16 @@ export default function HomePage() {
                               >
                                 <ClipboardList className="w-4 h-4" /> Log Past Workout
                               </button>
+                              <button
+                                onClick={() => {
+                                  setScheduleTarget({ id: plan.id, name: plan.name });
+                                  setScheduleDate(format(new Date(), "yyyy-MM-dd"));
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-muted text-foreground transition-colors border-t border-border/50"
+                              >
+                                <CalendarClock className="w-4 h-4" /> Schedule
+                              </button>
                               <button 
                                 onClick={() => handleDelete(plan.id)}
                                 className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-destructive/10 text-destructive transition-colors border-t border-border/50"
@@ -147,6 +183,45 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={!!scheduleTarget}
+        onClose={() => setScheduleTarget(null)}
+        title="Schedule Workout"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Schedule <span className="font-semibold text-foreground">{scheduleTarget?.name}</span> for a future date.
+          </p>
+          <div>
+            <label className="block text-sm font-semibold mb-1.5">Date</label>
+            <input
+              type="date"
+              value={scheduleDate}
+              min={format(new Date(), "yyyy-MM-dd")}
+              onChange={(e) => setScheduleDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setScheduleTarget(null)}
+              disabled={schedule.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleSchedule}
+              isLoading={schedule.isPending}
+            >
+              Schedule
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Layout>
   );
 }

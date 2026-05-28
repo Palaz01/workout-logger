@@ -125,11 +125,11 @@ export default function SessionDetailPage() {
     );
   }
 
-  const startedAt = new Date(session.startedAt);
+  const startedAt = session.startedAt ? new Date(session.startedAt) : null;
   const completedAt = session.completedAt
     ? new Date(session.completedAt)
     : null;
-  const duration = completedAt
+  const duration = startedAt && completedAt
     ? formatDistanceStrict(startedAt, completedAt)
     : "—";
 
@@ -152,7 +152,7 @@ export default function SessionDetailPage() {
           <div className="flex items-center gap-4 text-sm text-muted-foreground font-medium">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
-              {format(startedAt, "MMM d, yyyy · h:mm a")}
+              {startedAt ? format(startedAt, "MMM d, yyyy · h:mm a") : "—"}
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="w-4 h-4" />

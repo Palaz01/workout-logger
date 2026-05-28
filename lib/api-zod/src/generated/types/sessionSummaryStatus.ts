@@ -10,6 +10,7 @@ export type SessionSummaryStatus =
   (typeof SessionSummaryStatus)[keyof typeof SessionSummaryStatus];
 
 export const SessionSummaryStatus = {
+  scheduled: "scheduled",
   active: "active",
   completed: "completed",
   cancelled: "cancelled",

@@ -10,4 +10,6 @@ export interface StartSessionBody {
   planId: number;
   userId?: number;
   startedAt?: Date;
+  /** When set, creates a scheduled session instead of an active one */
+  scheduledFor?: Date;
 }

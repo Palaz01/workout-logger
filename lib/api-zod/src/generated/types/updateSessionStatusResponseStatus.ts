@@ -10,6 +10,7 @@ export type UpdateSessionStatusResponseStatus =
   (typeof UpdateSessionStatusResponseStatus)[keyof typeof UpdateSessionStatusResponseStatus];
 
 export const UpdateSessionStatusResponseStatus = {
+  scheduled: "scheduled",
   active: "active",
   completed: "completed",
   cancelled: "cancelled",

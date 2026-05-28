@@ -304,12 +304,15 @@ export interface StartSessionBody {
   planId: number;
   userId?: number;
   startedAt?: string;
+  /** When set, creates a scheduled session instead of an active one */
+  scheduledFor?: string;
 }
 
 export type UpdateSessionStatusBodyStatus =
   (typeof UpdateSessionStatusBodyStatus)[keyof typeof UpdateSessionStatusBodyStatus];
 
 export const UpdateSessionStatusBodyStatus = {
+  active: "active",
   completed: "completed",
   cancelled: "cancelled",
 } as const;
@@ -332,15 +335,16 @@ export type SessionSummaryStatus =
   (typeof SessionSummaryStatus)[keyof typeof SessionSummaryStatus];
 
 export const SessionSummaryStatus = {
+  scheduled: "scheduled",
   active: "active",
   completed: "completed",
   cancelled: "cancelled",
 } as const;
 
-export interface SessionSummaryConditioningEntriesItem {
+export type SessionSummaryConditioningEntriesItem = {
   planSetId?: number | null;
   description: string | null;
-}
+};
 
 export interface SessionSummary {
   id: number;
@@ -348,8 +352,9 @@ export interface SessionSummary {
   planName: string;
   userId?: number | null;
   status: SessionSummaryStatus;
-  startedAt: string;
+  startedAt?: string | null;
   completedAt?: string | null;
+  scheduledFor?: string | null;
   logCount: number;
   conditioningEntries: SessionSummaryConditioningEntriesItem[];
 }
@@ -381,6 +386,7 @@ export type SessionDetailStatus =
   (typeof SessionDetailStatus)[keyof typeof SessionDetailStatus];
 
 export const SessionDetailStatus = {
+  scheduled: "scheduled",
   active: "active",
   completed: "completed",
   cancelled: "cancelled",
@@ -397,8 +403,9 @@ export interface SessionDetail {
   planName: string;
   userId?: number | null;
   status: SessionDetailStatus;
-  startedAt: string;
+  startedAt?: string | null;
   completedAt?: string | null;
+  scheduledFor?: string | null;
   logs: SessionLogEntry[];
   setNotes: SetNoteEntry[];
 }
@@ -407,6 +414,7 @@ export type UpdateSessionStatusResponseStatus =
   (typeof UpdateSessionStatusResponseStatus)[keyof typeof UpdateSessionStatusResponseStatus];
 
 export const UpdateSessionStatusResponseStatus = {
+  scheduled: "scheduled",
   active: "active",
   completed: "completed",
   cancelled: "cancelled",
@@ -418,8 +426,9 @@ export interface UpdateSessionStatusResponse {
   planName: string;
   userId?: number | null;
   status: UpdateSessionStatusResponseStatus;
-  startedAt: string;
+  startedAt?: string | null;
   completedAt?: string | null;
+  scheduledFor?: string | null;
   logs: SessionLogEntry[];
   /** True when the session was auto-deleted (cancelled with zero logs) */
   deleted?: boolean;
@@ -454,9 +463,21 @@ export type ListSessionsParams = {
    * Filter sessions by user
    */
   userId?: number;
+  /**
+   * history = completed/cancelled (default), scheduled = upcoming scheduled
+   */
+  status?: ListSessionsStatus;
   limit?: number;
   offset?: number;
 };
+
+export type ListSessionsStatus =
+  (typeof ListSessionsStatus)[keyof typeof ListSessionsStatus];
+
+export const ListSessionsStatus = {
+  history: "history",
+  scheduled: "scheduled",
+} as const;
 
 export type UpsertSessionSetNote200 = {
   success: boolean;

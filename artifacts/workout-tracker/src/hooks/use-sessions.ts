@@ -52,6 +52,26 @@ export function useSessionMutations() {
     },
   });
 
+  const schedule = useMutation({
+    mutationFn: ({ planId, scheduledFor }: { planId: number; scheduledFor: Date }) => {
+      if (!activeUser) throw new Error("No active user");
+      return startSession({ planId, userId: activeUser.id, scheduledFor: scheduledFor.toISOString() });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey() });
+    },
+  });
+
+  const activateScheduled = useMutation({
+    mutationFn: (sessionId: number) =>
+      updateSessionStatus(sessionId, { status: "active" }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey(data.id) });
+      queryClient.invalidateQueries({ queryKey: getGetActiveSessionQueryKey(data.planId) });
+      queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey() });
+    },
+  });
+
   const logEntry = useMutation({
     mutationFn: ({
       sessionId,
@@ -130,5 +150,5 @@ export function useSessionMutations() {
     }) => upsertSessionSetNote(sessionId, { planSetId, note }),
   });
 
-  return { start, logEntry, complete, cancel, remove, saveSetNote };
+  return { start, schedule, activateScheduled, logEntry, complete, cancel, remove, saveSetNote };
 }

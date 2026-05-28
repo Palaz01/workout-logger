@@ -445,13 +445,20 @@ paths:
     get:
       operationId: listSessions
       tags: [sessions]
-      summary: List completed workout sessions
+      summary: List workout sessions (defaults to completed/cancelled history)
       parameters:
         - name: userId
           in: query
           schema:
             type: integer
           description: Filter sessions by user
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [history, scheduled]
+            default: history
+          description: "history = completed/cancelled (default), scheduled = upcoming scheduled"
         - name: limit
           in: query
           schema:
@@ -1169,6 +1176,10 @@ components:
         startedAt:
           type: string
           format: date-time
+        scheduledFor:
+          type: string
+          format: date-time
+          description: When set, creates a scheduled session instead of an active one
       required:
         - planId
 
@@ -1177,7 +1188,7 @@ components:
       properties:
         status:
           type: string
-          enum: [completed, cancelled]
+          enum: [active, completed, cancelled]
         completedAt:
           type: string
           format: date-time
@@ -1221,11 +1232,16 @@ components:
           nullable: true
         status:
           type: string
-          enum: [active, completed, cancelled]
+          enum: [scheduled, active, completed, cancelled]
         startedAt:
           type: string
           format: date-time
+          nullable: true
         completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        scheduledFor:
           type: string
           format: date-time
           nullable: true
@@ -1249,7 +1265,6 @@ components:
         - planId
         - planName
         - status
-        - startedAt
         - logCount
         - conditioningEntries
 
@@ -1303,11 +1318,16 @@ components:
           nullable: true
         status:
           type: string
-          enum: [active, completed, cancelled]
+          enum: [scheduled, active, completed, cancelled]
         startedAt:
           type: string
           format: date-time
+          nullable: true
         completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        scheduledFor:
           type: string
           format: date-time
           nullable: true
@@ -1324,7 +1344,6 @@ components:
         - planId
         - planName
         - status
-        - startedAt
         - logs
         - setNotes
 
@@ -1342,11 +1361,16 @@ components:
           nullable: true
         status:
           type: string
-          enum: [active, completed, cancelled]
+          enum: [scheduled, active, completed, cancelled]
         startedAt:
           type: string
           format: date-time
+          nullable: true
         completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        scheduledFor:
           type: string
           format: date-time
           nullable: true
@@ -1362,7 +1386,6 @@ components:
         - planId
         - planName
         - status
-        - startedAt
         - logs
 
     UpsertSetNoteBody:

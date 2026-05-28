@@ -224,7 +224,7 @@ export default function SessionPage() {
     if (activeSessionData?.session) {
       const existing = activeSessionData.session;
       setSessionId(existing.id);
-      setStartTime(new Date(existing.startedAt));
+      setStartTime(existing.startedAt ? new Date(existing.startedAt) : new Date());
 
       const restoredValues: Record<string, { weight: string; value: string }> = {};
       const restoredConditioning: Record<number, boolean> = {};
@@ -840,7 +840,7 @@ export default function SessionPage() {
 
             <Button
               className="w-full"
-              variant={done ? "outline" : "default"}
+              variant={done ? "outline" : "primary"}
               onClick={handleMarkDone}
               isLoading={logEntry.isPending}
               disabled={done}

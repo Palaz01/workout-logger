@@ -11,9 +11,10 @@ export const sessionsTable = pgTable("sessions", {
   organizationId: integer("organization_id").notNull().references(() => organizationsTable.id, { onDelete: "cascade" }),
   planId: integer("plan_id").references(() => plansTable.id, { onDelete: "set null" }),
   userId: integer("user_id").references(() => usersTable.id, { onDelete: "set null" }),
-  status: text("status", { enum: ["active", "completed", "cancelled"] }).notNull().default("active"),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  status: text("status", { enum: ["scheduled", "active", "completed", "cancelled"] }).notNull().default("active"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
   snapshotPlanName: text("snapshot_plan_name"),
 });
 

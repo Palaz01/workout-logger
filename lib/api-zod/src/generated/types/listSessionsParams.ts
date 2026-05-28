@@ -5,12 +5,17 @@
  * Workout Tracker API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ListSessionsStatus } from "./listSessionsStatus";
 
 export type ListSessionsParams = {
   /**
    * Filter sessions by user
    */
   userId?: number;
+  /**
+   * history = completed/cancelled (default), scheduled = upcoming scheduled
+   */
+  status?: ListSessionsStatus;
   limit?: number;
   offset?: number;
 };

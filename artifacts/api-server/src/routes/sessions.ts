@@ -46,6 +46,7 @@ async function getSessionDetail(sessionId: number) {
       status: sessionsTable.status,
       startedAt: sessionsTable.startedAt,
       completedAt: sessionsTable.completedAt,
+      scheduledFor: sessionsTable.scheduledFor,
     })
     .from(sessionsTable)
     .leftJoin(plansTable, eq(sessionsTable.planId, plansTable.id))
@@ -122,8 +123,9 @@ async function getSessionDetail(sessionId: number) {
       : (session.livePlanName ?? session.snapshotPlanName ?? "Deleted Plan"),
     userId: session.userId,
     status: session.status,
-    startedAt: session.startedAt,
+    startedAt: session.startedAt ?? null,
     completedAt: session.completedAt ?? null,
+    scheduledFor: session.scheduledFor ?? null,
     logs,
     setNotes: setNotes.filter((n) => n.planSetId != null) as { planSetId: number; note: string }[],
   };
@@ -135,11 +137,20 @@ router.get("/sessions", async (req, res): Promise<void> => {
   const limit = params.data?.limit ?? 50;
   const offset = params.data?.offset ?? 0;
   const userId = params.data?.userId;
+  const statusFilter = params.data?.status ?? "history";
 
-  const conditions = [inArray(sessionsTable.status, ["completed", "cancelled"]), eq(sessionsTable.organizationId, orgId)];
+  const conditions = [eq(sessionsTable.organizationId, orgId)];
+  if (statusFilter === "scheduled") {
+    conditions.push(eq(sessionsTable.status, "scheduled"));
+  } else {
+    conditions.push(inArray(sessionsTable.status, ["completed", "cancelled"]));
+  }
   if (userId != null) {
     conditions.push(eq(sessionsTable.userId, userId));
   }
+
+  const orderColumn = statusFilter === "scheduled" ? sessionsTable.scheduledFor : sessionsTable.completedAt;
+  const orderDirection = statusFilter === "scheduled" ? sql`asc nulls last` : sql`desc nulls last`;
 
   const rawSessions = await db
     .select({
@@ -151,6 +162,7 @@ router.get("/sessions", async (req, res): Promise<void> => {
       status: sessionsTable.status,
       startedAt: sessionsTable.startedAt,
       completedAt: sessionsTable.completedAt,
+      scheduledFor: sessionsTable.scheduledFor,
       logCount: count(sessionLogsTable.id),
     })
     .from(sessionsTable)
@@ -158,7 +170,7 @@ router.get("/sessions", async (req, res): Promise<void> => {
     .leftJoin(sessionLogsTable, eq(sessionsTable.id, sessionLogsTable.sessionId))
     .where(and(...conditions))
     .groupBy(sessionsTable.id, plansTable.name, sessionsTable.snapshotPlanName)
-    .orderBy(desc(sessionsTable.completedAt))
+    .orderBy(sql`${orderColumn} ${orderDirection}`)
     .limit(limit)
     .offset(offset);
 
@@ -191,17 +203,18 @@ router.get("/sessions", async (req, res): Promise<void> => {
   }
 
   const sessions = rawSessions.map((s) => {
-    const isCompleted = s.status !== "active";
+    const isFinalized = s.status === "completed" || s.status === "cancelled";
     return {
       id: s.id,
       planId: s.planId ?? 0,
-      planName: isCompleted
+      planName: isFinalized
         ? (s.snapshotPlanName ?? s.livePlanName ?? "Deleted Plan")
         : (s.livePlanName ?? s.snapshotPlanName ?? "Deleted Plan"),
       userId: s.userId,
       status: s.status,
-      startedAt: s.startedAt,
-      completedAt: s.completedAt,
+      startedAt: s.startedAt ?? null,
+      completedAt: s.completedAt ?? null,
+      scheduledFor: s.scheduledFor ?? null,
       logCount: s.logCount,
       conditioningEntries: conditioningBySession.get(s.id) ?? [],
     };
@@ -216,6 +229,7 @@ router.post("/sessions", async (req, res): Promise<void> => {
   const bodyWithDate = {
     ...req.body,
     ...(req.body.startedAt ? { startedAt: new Date(req.body.startedAt) } : {}),
+    ...(req.body.scheduledFor ? { scheduledFor: new Date(req.body.scheduledFor) } : {}),
   };
   const parsed = StartSessionBody.safeParse(bodyWithDate);
   if (!parsed.success) {
@@ -242,6 +256,24 @@ router.post("/sessions", async (req, res): Promise<void> => {
       res.status(400).json({ error: "User not found in your organization" });
       return;
     }
+  }
+
+  if (parsed.data.scheduledFor) {
+    const [session] = await db
+      .insert(sessionsTable)
+      .values({
+        planId: parsed.data.planId,
+        userId: parsed.data.userId ?? null,
+        status: "scheduled",
+        organizationId: orgId,
+        snapshotPlanName: plan.name,
+        startedAt: null,
+        scheduledFor: parsed.data.scheduledFor,
+      })
+      .returning();
+    const detail = await getSessionDetail(session.id);
+    res.status(201).json(detail);
+    return;
   }
 
   if (!parsed.data.startedAt) {
@@ -275,7 +307,7 @@ router.post("/sessions", async (req, res): Promise<void> => {
       status: "active",
       organizationId: orgId,
       snapshotPlanName: plan.name,
-      ...(parsed.data.startedAt ? { startedAt: parsed.data.startedAt } : {}),
+      startedAt: parsed.data.startedAt ?? new Date(),
     })
     .returning();
 
@@ -337,6 +369,43 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
 
   if (!existing) {
     res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  if (parsed.data.status === "active") {
+    if (existing.status !== "scheduled") {
+      res.status(400).json({ error: "Only scheduled sessions can be activated" });
+      return;
+    }
+    await db
+      .update(sessionsTable)
+      .set({ status: "active", startedAt: new Date() })
+      .where(eq(sessionsTable.id, params.data.id));
+    const detail = await getSessionDetail(params.data.id);
+    res.json(UpdateSessionStatusResponse.parse(detail!));
+    return;
+  }
+
+  if (existing.status === "scheduled") {
+    if (parsed.data.status === "cancelled") {
+      await db.delete(sessionsTable).where(eq(sessionsTable.id, params.data.id));
+      const fakeDetail = {
+        id: existing.id,
+        planId: existing.planId ?? 0,
+        planName: existing.snapshotPlanName ?? "Deleted Plan",
+        userId: existing.userId,
+        status: "cancelled" as const,
+        startedAt: null,
+        completedAt: parsed.data.completedAt ?? new Date(),
+        scheduledFor: existing.scheduledFor,
+        logs: [],
+        setNotes: [],
+        deleted: true,
+      };
+      res.json(UpdateSessionStatusResponse.parse(fakeDetail));
+      return;
+    }
+    res.status(400).json({ error: "Scheduled sessions can only be activated or cancelled" });
     return;
   }
 
@@ -468,6 +537,11 @@ router.post("/sessions/:id/logs", async (req, res): Promise<void> => {
 
   if (session.status !== "active") {
     res.status(400).json({ error: "Session is not active" });
+    return;
+  }
+
+  if (session.planId == null) {
+    res.status(400).json({ error: "Session's plan has been deleted" });
     return;
   }
 
@@ -624,6 +698,11 @@ router.post("/sessions/:id/set-note", async (req, res): Promise<void> => {
 
   if (session.status !== "active") {
     res.status(400).json({ error: "Session is not active" });
+    return;
+  }
+
+  if (session.planId == null) {
+    res.status(400).json({ error: "Session's plan has been deleted" });
     return;
   }
 

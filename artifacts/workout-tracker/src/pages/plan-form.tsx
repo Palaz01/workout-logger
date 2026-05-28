@@ -434,7 +434,7 @@ export default function PlanFormPage() {
             type="button" 
             variant="outline" 
             className="w-full border-dashed border-2 hover:bg-primary/5 hover:border-primary/30 hover:text-primary transition-colors h-14"
-            onClick={() => appendSet({ type: "straight", rounds: 3, restSeconds: null, orderIndex: sets.length, exercises: [{ exerciseId: 0, targetValue: "10", orderIndex: 0 }] })}
+            onClick={() => appendSet({ type: "straight", rounds: 3, restSeconds: null, orderIndex: sets.length, description: null, exercises: [{ exerciseId: 0, targetValue: "10", orderIndex: 0 }] })}
           >
             <Plus className="w-5 h-5 mr-2" /> Add Next Set
           </Button>
