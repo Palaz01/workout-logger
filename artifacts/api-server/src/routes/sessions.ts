@@ -377,6 +377,38 @@ router.patch("/sessions/:id", async (req, res): Promise<void> => {
       res.status(400).json({ error: "Only scheduled sessions can be activated" });
       return;
     }
+    if (existing.planId == null) {
+      res.status(400).json({ error: "Cannot activate: the workout plan has been deleted" });
+      return;
+    }
+
+    const [plan] = await db
+      .select({ id: plansTable.id })
+      .from(plansTable)
+      .where(and(eq(plansTable.id, existing.planId), eq(plansTable.organizationId, orgId)));
+    if (!plan) {
+      res.status(400).json({ error: "Cannot activate: the workout plan no longer exists" });
+      return;
+    }
+
+    const conflictConditions = [
+      eq(sessionsTable.planId, existing.planId),
+      eq(sessionsTable.status, "active"),
+      eq(sessionsTable.organizationId, orgId),
+    ];
+    if (existing.userId != null) {
+      conflictConditions.push(eq(sessionsTable.userId, existing.userId));
+    }
+    const [conflict] = await db
+      .select({ id: sessionsTable.id })
+      .from(sessionsTable)
+      .where(and(...conflictConditions))
+      .limit(1);
+    if (conflict) {
+      res.status(409).json({ error: "Another active session already exists for this plan" });
+      return;
+    }
+
     await db
       .update(sessionsTable)
       .set({ status: "active", startedAt: new Date() })
