@@ -204,7 +204,15 @@ Runs in order:
 1. `drizzle-kit push --force` — Syncs Drizzle schema to PostgreSQL (uses `--force` to skip interactive prompts; may apply destructive changes if schema diverges significantly)
 2. Creates `session` table (for connect-pg-simple) if not exists
 3. Runs snapshot backfill migration (adds snapshot columns, changes FKs to SET NULL, backfills snapshot values from live data)
-4. Starts Node.js server: `node artifacts/api-server/dist/index.cjs`
+4. Runs session date backfill migration (idempotent, in a transaction):
+   - Promotes any session with `session_logs` rows but a non-terminal status to `status='completed'`, filling `started_at`/`completed_at` from each other or `NOW()`
+   - Fills missing `started_at`/`completed_at` on already-completed sessions from the other column
+   - Last-resort `NOW()` fallback only for completed sessions with logs but no timestamps at all
+   - Logs a one-line summary (`Date backfill: promoted X, filled started_at on Y, ...`)
+   - Re-runs harmlessly on every deploy — every UPDATE has an `IS NULL` / status guard
+5. Starts Node.js server: `node artifacts/api-server/dist/index.cjs`
+
+**Schema + data migrations are fully automatic on every Railway deploy** — the user never needs to run SQL or scripts manually.
 
 ## Deployment (Railway)
 

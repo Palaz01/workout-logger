@@ -76,6 +76,62 @@ async function run() {
 run().catch(e => { console.error('Backfill error:', e); process.exit(1); });
 "
 
+echo "Running session date backfill migration..."
+node -e "
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+async function run() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const r1 = await client.query(\`
+      UPDATE sessions s
+      SET status = 'completed',
+          completed_at = COALESCE(s.completed_at, s.started_at, NOW()),
+          started_at = COALESCE(s.started_at, s.completed_at, NOW())
+      WHERE s.status NOT IN ('completed', 'cancelled', 'scheduled')
+        AND EXISTS (SELECT 1 FROM session_logs sl WHERE sl.session_id = s.id)
+    \`);
+
+    const r2 = await client.query(\`
+      UPDATE sessions
+      SET started_at = completed_at
+      WHERE status = 'completed'
+        AND started_at IS NULL
+        AND completed_at IS NOT NULL
+    \`);
+
+    const r3 = await client.query(\`
+      UPDATE sessions
+      SET completed_at = started_at
+      WHERE status = 'completed'
+        AND completed_at IS NULL
+        AND started_at IS NOT NULL
+    \`);
+
+    const r4 = await client.query(\`
+      UPDATE sessions s
+      SET started_at = NOW(), completed_at = NOW()
+      WHERE s.status = 'completed'
+        AND s.started_at IS NULL
+        AND s.completed_at IS NULL
+        AND EXISTS (SELECT 1 FROM session_logs sl WHERE sl.session_id = s.id)
+    \`);
+
+    await client.query('COMMIT');
+    console.log('Date backfill: promoted ' + r1.rowCount + ', filled started_at on ' + r2.rowCount + ', filled completed_at on ' + r3.rowCount + ', fallback NOW() on ' + r4.rowCount);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+    await pool.end();
+  }
+}
+run().catch(e => { console.error('Date backfill error:', e); process.exit(1); });
+"
+
 cd /app
 
 echo "Starting server..."
