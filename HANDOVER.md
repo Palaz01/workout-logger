@@ -138,7 +138,8 @@ The app is deployed on Railway and auto-deploys from the `main` branch of `Palaz
    1. `drizzle-kit push --force` (schema sync; uses `--force` to skip prompts)
    2. Session table creation (if missing)
    3. Snapshot backfill migration (idempotent — fills history snapshot columns for any sessions that predate the snapshot feature)
-   4. Starts the Node server
+   4. Session date backfill migration (idempotent, transactional — promotes logged-but-non-terminal sessions to `completed`, fills missing `started_at`/`completed_at` from each other, with a `NOW()` last-resort fallback)
+   5. Starts the Node server
 
    This means schema changes pushed to `main` will sync to the production DB automatically. **Be careful with destructive schema changes** — `--force` will apply them.
 
@@ -155,8 +156,9 @@ The app is deployed on Railway and auto-deploys from the `main` branch of `Palaz
 - **Plan builder** — Workout plans with straight sets, supersets, trisets, rounds, rest seconds
 - **Plan assignments** — Many-to-many between plans and users
 - **Session logging** — Step-by-step guided workout flow with weight + value entry
-- **Last Stats** — Shows previous session's stats for the same exercise (matched by `exerciseId`, survives plan restructuring)
-- **Set notes** — Per-set notes during a session, shown in Last Stats modal
+- **Per-exercise history** — In-session modal showing previous logs for the same exercise (matched by `exerciseId`, survives plan restructuring) with a 2W/1M/3M/All period selector (`GET /exercises/:id/history`)
+- **Set notes** — Per-set notes during a session, shown in the history modal
+- **Scheduled workouts** — Schedule a plan for a future date; a weekly calendar on the Home page shows upcoming scheduled workouts (`sessions.scheduled_for` + `status='scheduled'`)
 - **History** — Monthly-grouped list of past sessions; detail view with full breakdown
 - **Log past workout** — Backfill a session with a custom date
 - **Invitations** — Trainers email-invite new users (trainer or client role) via tokenized links
@@ -164,6 +166,9 @@ The app is deployed on Railway and auto-deploys from the `main` branch of `Palaz
 - **PWA support** — `manifest.json`, icons, theme color, installable on iOS home screen
 
 ### Recent task history (most recent first)
+- **#51** — Automatic session-date backfill on Railway (`start.sh` step 4): promotes logged-but-non-terminal sessions to `completed` and fills missing `started_at`/`completed_at` timestamps (idempotent, transactional)
+- **#50** — Per-exercise history modal during a session, with a 2W/1M/3M/All period selector (`GET /exercises/:id/history`)
+- **#46** — Scheduled workouts + weekly calendar on the Home page (`sessions.scheduled_for`, `status='scheduled'`)
 - **#38** — Comprehensive rewrite of `replit.md` (~250 lines) as the canonical technical reference
 - **#37** — Last Stats modal shows previous session's set note; added subtle Last Stats link on exercise screen badge row
 - **#36** — Fixed Last Stats matching to use `exerciseId` instead of `planSetId` (survives plan restructuring)

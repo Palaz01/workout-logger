@@ -4,7 +4,7 @@
 
 ## Overview
 
-Mobile-first workout tracking web app (English UI) with exercise library, plan builder, step-by-step session logging, history with monthly grouping, and full multi-tenant multi-user support. Trainers manage clients, assign plans, and track progress. Includes authentication, organization-scoped data isolation, and email verification via Resend. Deployed to Railway via Docker.
+Mobile-first workout tracking web app (English UI) with exercise library, plan builder, step-by-step session logging, scheduled workouts on a weekly Home calendar, per-exercise history (with period selector), history with monthly grouping, and full multi-tenant multi-user support. Trainers manage clients, assign plans, and track progress. Includes authentication, organization-scoped data isolation, and email verification via Resend. Deployed to Railway via Docker.
 
 ## User Preferences
 
@@ -89,7 +89,7 @@ PostgreSQL with Drizzle ORM. Schema files in `lib/db/src/schema/`. All IDs are `
 - `id`, `set_id` (FK → plan_sets, CASCADE), `exercise_id` (FK → exercises, CASCADE), `target_value` (default: "10"), `order_index`
 
 **sessions** — Workout session records. ⚠️ Uses SET NULL FKs for history preservation.
-- `id`, `organization_id` (FK → organizations, CASCADE), `plan_id` (FK → plans, **SET NULL**), `user_id` (FK → users, SET NULL), `status` (enum: active/completed/cancelled), `started_at`, `completed_at`, `snapshot_plan_name`
+- `id`, `organization_id` (FK → organizations, CASCADE), `plan_id` (FK → plans, **SET NULL**), `user_id` (FK → users, SET NULL), `status` (enum: scheduled/active/completed/cancelled), `started_at` (nullable), `completed_at` (nullable), `scheduled_for` (nullable timestamptz — set when a workout is scheduled on the Home calendar), `snapshot_plan_name`
 
 **session_logs** — Individual exercise log entries within a session. ⚠️ Uses SET NULL FKs.
 - `id`, `session_id` (FK → sessions, CASCADE), `plan_set_id` (FK → plan_sets, **SET NULL**), `exercise_id` (FK → exercises, **SET NULL**), `round_number`, `weight` (real), `value` (real), `snapshot_exercise_name`, `snapshot_measurement_type`
@@ -118,7 +118,7 @@ PostgreSQL with Drizzle ORM. Schema files in `lib/db/src/schema/`. All IDs are `
 - On session completion, the API unconditionally writes snapshot values from live data
 - When reading completed sessions, the API prefers snapshot values over live (joined) data
 - When reading active sessions, the API prefers live data over snapshots
-- The "Last Stats" feature matches by `exerciseId` (not `planSetId`) to survive plan restructuring
+- The per-exercise history feature (`GET /exercises/:id/history`, surfaced via the in-session history modal) matches by `exerciseId` (not `planSetId`) to survive plan restructuring
 - `start.sh` runs a backfill migration on every startup to fill snapshots for any sessions that predate this feature
 
 ## API Routes
@@ -129,7 +129,7 @@ All routes are prefixed with `/api` (configured in `app.ts`). Auth middleware (`
 |---|---|
 | `health.ts` | `GET /healthz` |
 | `auth.ts` | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `GET /auth/verify-email`, `POST /auth/resend-verification` |
-| `exercises.ts` | `GET /exercises`, `POST /exercises`, `GET /exercises/:id`, `PUT /exercises/:id`, `DELETE /exercises/:id` |
+| `exercises.ts` | `GET /exercises`, `POST /exercises`, `GET /exercises/:id`, `PUT /exercises/:id`, `DELETE /exercises/:id`, `GET /exercises/:id/history` (per-exercise log history; supports `userId`, `since`, `limit` query params) |
 | `plans.ts` | `GET /plans`, `POST /plans`, `GET /plans/:id`, `PUT /plans/:id`, `DELETE /plans/:id` |
 | `sessions.ts` | `GET /sessions`, `POST /sessions`, `GET /sessions/:id`, `PATCH /sessions/:id`, `DELETE /sessions/:id`, `POST /sessions/:id/logs`, `POST /sessions/:id/set-note`, `GET /plans/:id/active-session`, `GET /plans/:id/last-session` |
 | `users.ts` | `GET /users`, `POST /users`, `PUT /users/:id`, `DELETE /users/:id` |
@@ -139,11 +139,11 @@ All routes are prefixed with `/api` (configured in `app.ts`). Auth middleware (`
 
 | File | Route | Description |
 |---|---|---|
-| `home.tsx` | `/` | Plans list (main page), plan cards with start/edit/delete |
+| `home.tsx` | `/` | Plans list (main page), plan cards with start/edit/delete; weekly calendar of scheduled workouts |
 | `plan-detail.tsx` | `/plans/:id` | View plan details (sets, exercises, rounds) |
 | `plan-form.tsx` | `/plans/new`, `/plans/:id/edit` | Create/edit workout plans |
 | `exercises.tsx` | `/exercises` | Exercise library CRUD |
-| `session.tsx` | `/session/:planId` | Step-by-step guided workout logging with Last Stats |
+| `session.tsx` | `/session/:planId` | Step-by-step guided workout logging with per-exercise history modal (2W/1M/3M/All period selector) |
 | `session-detail.tsx` | `/history/:id` | Review completed session details |
 | `history.tsx` | `/history` | Session history with monthly grouping |
 | `log-past.tsx` | `/log-past/:planId` | Log a past workout with date picker |
